@@ -103,4 +103,14 @@ describe("runOmniJSJson", () => {
     mockExecFileAsync.mockResolvedValue({ stdout: "not json at all", stderr: "" });
     await expect(runOmniJSJson("test")).rejects.toThrow("Failed to parse");
   });
+
+  it("should include JSON parse error details in thrown error", async () => {
+    mockExecFileAsync.mockResolvedValue({ stdout: "{invalid json", stderr: "" });
+    await expect(runOmniJSJson("test")).rejects.toThrow(/Unexpected|Expected/);
+  });
+
+  it("should include raw response preview in thrown error", async () => {
+    mockExecFileAsync.mockResolvedValue({ stdout: "not-json-data", stderr: "" });
+    await expect(runOmniJSJson("test")).rejects.toThrow("not-json-data");
+  });
 });

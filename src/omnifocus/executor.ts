@@ -45,6 +45,7 @@ export async function runOmniJS(omniScript: string): Promise<string> {
       const exitCode = execError.killed ? null : (execError.code ?? 1);
 
       logger.error("OmniJS execution failed", { stderr, exitCode });
+      logger.debug("Failed script preview", { script: omniScript.substring(0, 500) });
       throw parseExecutorError(stderr, exitCode);
     }
   };
@@ -61,8 +62,9 @@ export async function runOmniJSJson<T>(omniScript: string): Promise<T> {
 
   try {
     return JSON.parse(raw) as T;
-  } catch {
-    logger.error("Failed to parse OmniJS JSON response", { raw: raw.substring(0, 500) });
-    throw new Error(`Failed to parse OmniFocus response as JSON: ${raw.substring(0, 200)}`);
+  } catch (parseError) {
+    const parseMessage = parseError instanceof Error ? parseError.message : String(parseError);
+    logger.error("Failed to parse OmniJS JSON response", { raw: raw.substring(0, 500), parseError: parseMessage });
+    throw new Error(`Failed to parse OmniFocus response as JSON (${parseMessage}): ${raw.substring(0, 200)}`);
   }
 }

@@ -25,7 +25,7 @@ export function registerDatabaseTools(server: McpServer, client: OmniFocusClient
     "search",
     "Search across all OmniFocus items (tasks, projects, folders, tags) by name or note content",
     {
-      query: z.string().describe("Search query string"),
+      query: z.string().min(1).describe("Search query string"),
       limit: z.number().min(1).max(200).optional().describe("Maximum number of results (default 50)"),
     },
     async ({ query, limit }) => {

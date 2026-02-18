@@ -1,12 +1,17 @@
 {
-  "name": "omnifocus-mcp",
+  "name": "omnifocus-mcp-server",
   "version": "1.0.0",
   "description": "MCP server for OmniFocus via Omni Automation API",
   "type": "module",
   "main": "dist/index.js",
   "bin": {
-    "omnifocus-mcp": "dist/index.js"
+    "omnifocus-mcp-server": "dist/index.js"
   },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
     "build": "tsc",
     "dev": "tsx src/index.ts",
@@ -28,5 +33,21 @@
   "engines": {
     "node": ">=18"
   },
+  "keywords": [
+    "omnifocus",
+    "mcp",
+    "model-context-protocol",
+    "automation",
+    "gtd",
+    "task-management",
+    "claude",
+    "ai"
+  ],
+  "author": "Illya Starikov",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/IllyaStarikov/omnifocus-mcp.git"
+  },
+  "homepage": "https://github.com/IllyaStarikov/omnifocus-mcp",
   "license": "MIT"
 }
