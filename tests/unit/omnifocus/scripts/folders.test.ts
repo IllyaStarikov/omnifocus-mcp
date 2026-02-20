@@ -62,9 +62,14 @@ describe("folder script builders", () => {
       expect(script).toContain("Renamed");
     });
 
-    it("should handle status update", () => {
+    it("should handle dropped status", () => {
       const script = buildUpdateFolderScript({ id: "folder-123", status: "dropped" });
       expect(script).toContain("Folder.Status.Dropped");
+    });
+
+    it("should handle active status", () => {
+      const script = buildUpdateFolderScript({ id: "folder-123", status: "active" });
+      expect(script).toContain("Folder.Status.Active");
     });
   });
 

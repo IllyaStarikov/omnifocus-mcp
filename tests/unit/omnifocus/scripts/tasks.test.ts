@@ -86,6 +86,41 @@ describe("task script builders", () => {
       expect(script).toContain("available");
     });
 
+    it("should handle taskStatus 'remaining'", () => {
+      const script = buildListTasksScript({ taskStatus: "remaining" });
+      expect(script).toContain("remaining");
+    });
+
+    it("should handle taskStatus 'completed'", () => {
+      const script = buildListTasksScript({ taskStatus: "completed" });
+      expect(script).toContain("completed");
+    });
+
+    it("should handle taskStatus 'dropped'", () => {
+      const script = buildListTasksScript({ taskStatus: "dropped" });
+      expect(script).toContain("dropped");
+    });
+
+    it("should combine multiple filters", () => {
+      const script = buildListTasksScript({
+        flagged: true,
+        taskStatus: "available",
+        tagNames: ["work"],
+        dueAfter: "2024-01-01T00:00:00Z",
+        dueBefore: "2024-12-31T23:59:59Z",
+        search: "test",
+        limit: 50,
+        offset: 10,
+      });
+      expect(script).toContain("flagged");
+      expect(script).toContain("available");
+      expect(script).toContain("work");
+      expect(script).toContain("dueAfter");
+      expect(script).toContain("test");
+      expect(script).toContain("50");
+      expect(script).toContain("10");
+    });
+
     it("should include project ID filter", () => {
       const script = buildListTasksScript({ projectId: "proj-123" });
       expect(script).toContain("proj-123");
@@ -189,7 +224,7 @@ describe("task script builders", () => {
       expect(script).toContain("completedByChildren");
     });
 
-    it("should handle repetition rule", () => {
+    it("should handle repetition rule with fixed method", () => {
       const script = buildCreateTaskScript({
         name: "Weekly review",
         repetitionRule: { ruleString: "FREQ=WEEKLY;INTERVAL=1", method: "fixed" },
@@ -197,6 +232,33 @@ describe("task script builders", () => {
       expect(script).toContain("FREQ=WEEKLY");
       expect(script).toContain("RepetitionMethod");
       expect(script).toContain("RepetitionRule");
+    });
+
+    it("should handle repetition rule with startAfterCompletion method", () => {
+      const script = buildCreateTaskScript({
+        name: "Daily habit",
+        repetitionRule: { ruleString: "FREQ=DAILY;INTERVAL=1", method: "startAfterCompletion" },
+      });
+      expect(script).toContain("FREQ=DAILY");
+      expect(script).toContain("startAfterCompletion");
+    });
+
+    it("should handle repetition rule with dueAfterCompletion method", () => {
+      const script = buildCreateTaskScript({
+        name: "Monthly review",
+        repetitionRule: { ruleString: "FREQ=MONTHLY;INTERVAL=1", method: "dueAfterCompletion" },
+      });
+      expect(script).toContain("FREQ=MONTHLY");
+      expect(script).toContain("dueAfterCompletion");
+    });
+
+    it("should handle empty tags array", () => {
+      const script = buildCreateTaskScript({
+        name: "Test",
+        tags: [],
+      });
+      // Should still produce valid script (tags array embedded but empty)
+      expect(script).toContain("JSON.parse");
     });
   });
 
@@ -224,6 +286,16 @@ describe("task script builders", () => {
     it("should handle clearing repetition rule", () => {
       const script = buildUpdateTaskScript({ id: "task-123", repetitionRule: null });
       expect(script).toContain("repetitionRule");
+    });
+
+    it("should handle clearing estimatedMinutes with null", () => {
+      const script = buildUpdateTaskScript({ id: "task-123", estimatedMinutes: null });
+      expect(script).toContain("estimatedMinutes");
+    });
+
+    it("should handle clearing deferDate with null", () => {
+      const script = buildUpdateTaskScript({ id: "task-123", deferDate: null });
+      expect(script).toContain("deferDate");
     });
   });
 

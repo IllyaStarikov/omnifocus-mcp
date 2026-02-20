@@ -680,4 +680,283 @@ describe("OmniFocusClient", () => {
       expect(mockRunOmniJSJson).toHaveBeenCalledTimes(5);
     });
   });
+
+  // ─── Additional cache invalidation tests ──────────────────────────
+
+  describe("duplicateTasks cache invalidation", () => {
+    it("should invalidate tasks, projects, and database caches", async () => {
+      mockRunOmniJSJson.mockResolvedValue(mockTaskList);
+      await client.listTasks();
+
+      mockRunOmniJSJson.mockResolvedValue([mockTask]);
+      await client.duplicateTasks({ taskIds: ["task-abc-123"] });
+
+      mockRunOmniJSJson.mockResolvedValue(mockTaskList);
+      await client.listTasks();
+      expect(mockRunOmniJSJson).toHaveBeenCalledTimes(3);
+    });
+  });
+
+  describe("addTaskNotification cache invalidation", () => {
+    it("should invalidate tasks cache", async () => {
+      mockRunOmniJSJson.mockResolvedValue(mockTaskList);
+      await client.listTasks();
+
+      mockRunOmniJSJson.mockResolvedValue(mockTask);
+      await client.addTaskNotification({ taskId: "task-abc-123", type: "absolute", absoluteDate: "2024-12-20T09:00:00Z" });
+
+      mockRunOmniJSJson.mockResolvedValue(mockTaskList);
+      await client.listTasks();
+      expect(mockRunOmniJSJson).toHaveBeenCalledTimes(3);
+    });
+  });
+
+  describe("appendTaskNote cache invalidation", () => {
+    it("should invalidate tasks cache", async () => {
+      mockRunOmniJSJson.mockResolvedValue(mockTaskList);
+      await client.listTasks();
+
+      mockRunOmniJSJson.mockResolvedValue(mockTask);
+      await client.appendTaskNote("task-abc-123", "Extra");
+
+      mockRunOmniJSJson.mockResolvedValue(mockTaskList);
+      await client.listTasks();
+      expect(mockRunOmniJSJson).toHaveBeenCalledTimes(3);
+    });
+  });
+
+  describe("removeTaskNotification cache invalidation", () => {
+    it("should invalidate tasks cache", async () => {
+      mockRunOmniJSJson.mockResolvedValue(mockTaskList);
+      await client.listTasks();
+
+      mockRunOmniJSJson.mockResolvedValue({ removed: true, taskId: "task-abc-123", notificationId: "notif-1" });
+      await client.removeTaskNotification("task-abc-123", "notif-1");
+
+      mockRunOmniJSJson.mockResolvedValue(mockTaskList);
+      await client.listTasks();
+      expect(mockRunOmniJSJson).toHaveBeenCalledTimes(3);
+    });
+  });
+
+  describe("convertTaskToProject cache invalidation", () => {
+    it("should invalidate tasks, projects, and database caches", async () => {
+      mockRunOmniJSJson.mockResolvedValue(mockTaskList);
+      await client.listTasks();
+      mockRunOmniJSJson.mockResolvedValue(mockProjectList);
+      await client.listProjects();
+
+      mockRunOmniJSJson.mockResolvedValue(mockProject);
+      await client.convertTaskToProject("task-abc-123");
+
+      mockRunOmniJSJson.mockResolvedValue(mockTaskList);
+      await client.listTasks();
+      mockRunOmniJSJson.mockResolvedValue(mockProjectList);
+      await client.listProjects();
+      // 2 primes + 1 mutation + 2 re-fetches = 5
+      expect(mockRunOmniJSJson).toHaveBeenCalledTimes(5);
+    });
+  });
+
+  describe("uncompleteTask cache invalidation", () => {
+    it("should invalidate tasks, projects, and database caches", async () => {
+      mockRunOmniJSJson.mockResolvedValue(mockDatabaseSummary);
+      await client.getDatabaseSummary();
+
+      mockRunOmniJSJson.mockResolvedValue({ ...mockCompletedTask, completed: false });
+      await client.uncompleteTask("task-completed-1");
+
+      mockRunOmniJSJson.mockResolvedValue(mockDatabaseSummary);
+      await client.getDatabaseSummary();
+      expect(mockRunOmniJSJson).toHaveBeenCalledTimes(3);
+    });
+  });
+
+  describe("dropTask cache invalidation", () => {
+    it("should invalidate tasks, projects, and database caches", async () => {
+      mockRunOmniJSJson.mockResolvedValue(mockDatabaseSummary);
+      await client.getDatabaseSummary();
+
+      mockRunOmniJSJson.mockResolvedValue({ ...mockTask, dropped: true });
+      await client.dropTask("task-abc-123");
+
+      mockRunOmniJSJson.mockResolvedValue(mockDatabaseSummary);
+      await client.getDatabaseSummary();
+      expect(mockRunOmniJSJson).toHaveBeenCalledTimes(3);
+    });
+  });
+
+  describe("moveProject cache invalidation", () => {
+    it("should invalidate projects and folders caches", async () => {
+      mockRunOmniJSJson.mockResolvedValue(mockProjectList);
+      await client.listProjects();
+      mockRunOmniJSJson.mockResolvedValue([mockFolder]);
+      await client.listFolders();
+
+      mockRunOmniJSJson.mockResolvedValue(mockProject);
+      await client.moveProject("proj-abc-123", "folder-2");
+
+      mockRunOmniJSJson.mockResolvedValue(mockProjectList);
+      await client.listProjects();
+      mockRunOmniJSJson.mockResolvedValue([mockFolder]);
+      await client.listFolders();
+      // 2 primes + 1 mutation + 2 re-fetches = 5
+      expect(mockRunOmniJSJson).toHaveBeenCalledTimes(5);
+    });
+  });
+
+  describe("deleteFolder cache invalidation", () => {
+    it("should invalidate folders, projects, and database caches", async () => {
+      mockRunOmniJSJson.mockResolvedValue([mockFolder]);
+      await client.listFolders();
+
+      mockRunOmniJSJson.mockResolvedValue({ deleted: true, id: "folder-1" });
+      await client.deleteFolder("folder-1");
+
+      mockRunOmniJSJson.mockResolvedValue([mockFolder]);
+      await client.listFolders();
+      expect(mockRunOmniJSJson).toHaveBeenCalledTimes(3);
+    });
+  });
+
+  describe("deleteTag cache invalidation", () => {
+    it("should invalidate tags, tasks, and database caches", async () => {
+      mockRunOmniJSJson.mockResolvedValue([mockTag]);
+      await client.listTags();
+
+      mockRunOmniJSJson.mockResolvedValue({ deleted: true, id: "tag-1" });
+      await client.deleteTag("tag-1");
+
+      mockRunOmniJSJson.mockResolvedValue([mockTag]);
+      await client.listTags();
+      expect(mockRunOmniJSJson).toHaveBeenCalledTimes(3);
+    });
+  });
+
+  describe("dropProject cache invalidation", () => {
+    it("should invalidate projects, tasks, and database caches", async () => {
+      mockRunOmniJSJson.mockResolvedValue(mockProjectList);
+      await client.listProjects();
+
+      mockRunOmniJSJson.mockResolvedValue({ ...mockProject, status: "dropped" });
+      await client.dropProject("proj-abc-123");
+
+      mockRunOmniJSJson.mockResolvedValue(mockProjectList);
+      await client.listProjects();
+      expect(mockRunOmniJSJson).toHaveBeenCalledTimes(3);
+    });
+  });
+
+  describe("markReviewed cache invalidation", () => {
+    it("should invalidate projects cache", async () => {
+      mockRunOmniJSJson.mockResolvedValue(mockProjectList);
+      await client.listProjects();
+
+      mockRunOmniJSJson.mockResolvedValue(mockProject);
+      await client.markReviewed("proj-abc-123");
+
+      mockRunOmniJSJson.mockResolvedValue(mockProjectList);
+      await client.listProjects();
+      expect(mockRunOmniJSJson).toHaveBeenCalledTimes(3);
+    });
+  });
+
+  // ─── Cross-cache verification ─────────────────────────────────────
+
+  describe("cross-cache verification", () => {
+    it("updateTask should NOT invalidate database cache", async () => {
+      mockRunOmniJSJson.mockResolvedValue(mockDatabaseSummary);
+      await client.getDatabaseSummary();
+
+      mockRunOmniJSJson.mockResolvedValue(mockTask);
+      await client.updateTask({ id: "task-abc-123", name: "Updated" });
+
+      // Database cache should still be valid (2 calls total)
+      await client.getDatabaseSummary();
+      expect(mockRunOmniJSJson).toHaveBeenCalledTimes(2);
+    });
+
+    it("updateProject should NOT invalidate tasks or database cache", async () => {
+      mockRunOmniJSJson.mockResolvedValue(mockDatabaseSummary);
+      await client.getDatabaseSummary();
+      mockRunOmniJSJson.mockResolvedValue(mockTaskList);
+      await client.listTasks();
+
+      mockRunOmniJSJson.mockResolvedValue(mockProject);
+      await client.updateProject({ id: "proj-abc-123", name: "Updated" });
+
+      // Database and tasks caches should still be valid
+      await client.getDatabaseSummary();
+      await client.listTasks();
+      // 2 primes + 1 mutation = 3 (no re-fetches needed)
+      expect(mockRunOmniJSJson).toHaveBeenCalledTimes(3);
+    });
+
+    it("updateFolder should NOT invalidate database or tasks cache", async () => {
+      mockRunOmniJSJson.mockResolvedValue(mockDatabaseSummary);
+      await client.getDatabaseSummary();
+
+      mockRunOmniJSJson.mockResolvedValue(mockFolder);
+      await client.updateFolder({ id: "folder-1", name: "Updated" });
+
+      // Database cache should still be valid
+      await client.getDatabaseSummary();
+      expect(mockRunOmniJSJson).toHaveBeenCalledTimes(2);
+    });
+
+    it("updateTag should NOT invalidate database or tasks cache", async () => {
+      mockRunOmniJSJson.mockResolvedValue(mockDatabaseSummary);
+      await client.getDatabaseSummary();
+
+      mockRunOmniJSJson.mockResolvedValue(mockTag);
+      await client.updateTag({ id: "tag-1", name: "Updated" });
+
+      // Database cache should still be valid
+      await client.getDatabaseSummary();
+      expect(mockRunOmniJSJson).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  // ─── Cache management ─────────────────────────────────────────────
+
+  describe("destroy", () => {
+    it("should not throw", () => {
+      expect(() => client.destroy()).not.toThrow();
+    });
+  });
+
+  describe("invalidateCache", () => {
+    it("should clear all caches when called with no prefix", async () => {
+      mockRunOmniJSJson.mockResolvedValue(mockDatabaseSummary);
+      await client.getDatabaseSummary();
+      mockRunOmniJSJson.mockResolvedValue(mockTaskList);
+      await client.listTasks();
+
+      client.invalidateCache();
+
+      mockRunOmniJSJson.mockResolvedValue(mockDatabaseSummary);
+      await client.getDatabaseSummary();
+      mockRunOmniJSJson.mockResolvedValue(mockTaskList);
+      await client.listTasks();
+      // 2 primes + 2 re-fetches = 4
+      expect(mockRunOmniJSJson).toHaveBeenCalledTimes(4);
+    });
+
+    it("should clear only matching prefix", async () => {
+      mockRunOmniJSJson.mockResolvedValue(mockDatabaseSummary);
+      await client.getDatabaseSummary();
+      mockRunOmniJSJson.mockResolvedValue(mockTaskList);
+      await client.listTasks();
+
+      client.invalidateCache("tasks:");
+
+      // Database should still be cached
+      await client.getDatabaseSummary();
+      // Tasks should need re-fetch
+      mockRunOmniJSJson.mockResolvedValue(mockTaskList);
+      await client.listTasks();
+      // 2 primes + 1 re-fetch (tasks only) = 3
+      expect(mockRunOmniJSJson).toHaveBeenCalledTimes(3);
+    });
+  });
 });
