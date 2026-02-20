@@ -342,6 +342,7 @@ export function buildSetTaskTagsScript(args: SetTaskTagsArgs): string {
   function findOrCreateTag(name) {
     if (tagMap[name]) return tagMap[name];
     var newTag = new Tag(name);
+    tags.push(newTag);
     tagMap[name] = newTag;
     return newTag;
   }
@@ -381,8 +382,6 @@ export function buildAddTaskNotificationScript(args: AddTaskNotificationArgs): s
   } else if (args.type === "dueRelative") {
     if (args.relativeOffset === undefined) throw new Error("relativeOffset is required for dueRelative notifications");
     task.addNotification(args.relativeOffset);
-  } else if (args.type === "deferRelative") {
-    throw new Error("deferRelative notifications are not supported by the OmniFocus Omni Automation API");
   }
 
   return JSON.stringify(serializeTask(task));
@@ -485,6 +484,7 @@ export function buildBatchCreateTasksScript(args: BatchCreateTasksArgs): string 
   function findOrCreateTag(name) {
     if (tagMap[name]) return tagMap[name];
     var newTag = new Tag(name);
+    tags.push(newTag);
     tagMap[name] = newTag;
     return newTag;
   }

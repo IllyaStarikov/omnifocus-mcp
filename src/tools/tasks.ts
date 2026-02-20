@@ -261,7 +261,7 @@ export function registerTaskTools(server: McpServer, client: OmniFocusClient): v
     "Add a notification/reminder to a task",
     {
       taskId: z.string().describe("The task ID"),
-      type: z.enum(["absolute", "dueRelative", "deferRelative"]).describe("Notification type"),
+      type: z.enum(["absolute", "dueRelative"]).describe("Notification type"),
       absoluteDate: z.string().optional().describe("For 'absolute' type: ISO 8601 date for notification"),
       relativeOffset: z.number().optional().describe("For relative types: offset in seconds (negative = before)"),
     },

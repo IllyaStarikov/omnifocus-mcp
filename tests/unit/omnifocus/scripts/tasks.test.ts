@@ -450,13 +450,13 @@ describe("task script builders", () => {
       expect(script).toContain("-3600");
     });
 
-    it("should handle defer-relative notification type", () => {
+    it("should not accept deferRelative type", () => {
       const script = buildAddTaskNotificationScript({
         taskId: "task-123",
-        type: "deferRelative",
-        relativeOffset: 0,
+        type: "dueRelative" as any,
+        relativeOffset: -3600,
       });
-      expect(script).toContain("deferRelative");
+      expect(script).not.toContain("deferRelative");
     });
   });
 

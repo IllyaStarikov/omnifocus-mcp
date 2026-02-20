@@ -202,7 +202,7 @@ export interface SetTaskTagsArgs {
 
 export interface AddTaskNotificationArgs {
   taskId: string;
-  type: "absolute" | "dueRelative" | "deferRelative";
+  type: "absolute" | "dueRelative";
   absoluteDate?: string;
   relativeOffset?: number;
 }
@@ -326,7 +326,7 @@ export interface DumpDatabaseArgs {
 
 export interface TaskNotificationJSON {
   id: string;
-  kind: "absolute" | "dueRelative" | "deferRelative";
+  kind: "absolute" | "dueRelative" | "unknown";
   absoluteFireDate: string | null;
   relativeFireOffset: number | null;
   nextFireDate: string | null;
