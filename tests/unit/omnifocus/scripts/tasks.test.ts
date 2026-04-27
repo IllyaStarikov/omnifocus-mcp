@@ -65,6 +65,15 @@ describe("task script builders", () => {
       expect(script).toContain("deferBefore");
     });
 
+    it("should include planned date filters", () => {
+      const script = buildListTasksScript({
+        plannedAfter: "2024-01-01T00:00:00Z",
+        plannedBefore: "2024-06-01T00:00:00Z",
+      });
+      expect(script).toContain("plannedAfter");
+      expect(script).toContain("plannedBefore");
+    });
+
     it("should include search filter", () => {
       const script = buildListTasksScript({ search: "groceries" });
       expect(script).toContain("groceries");
@@ -213,6 +222,7 @@ describe("task script builders", () => {
         flagged: true,
         deferDate: "2024-01-01T00:00:00Z",
         dueDate: "2024-12-31T23:59:59Z",
+        plannedDate: "2024-06-15T12:00:00Z",
         estimatedMinutes: 30,
         completedByChildren: true,
       });
@@ -220,6 +230,7 @@ describe("task script builders", () => {
       expect(script).toContain("flagged");
       expect(script).toContain("deferDate");
       expect(script).toContain("dueDate");
+      expect(script).toContain("plannedDate");
       expect(script).toContain("estimatedMinutes");
       expect(script).toContain("completedByChildren");
     });
@@ -296,6 +307,17 @@ describe("task script builders", () => {
     it("should handle clearing deferDate with null", () => {
       const script = buildUpdateTaskScript({ id: "task-123", deferDate: null });
       expect(script).toContain("deferDate");
+    });
+
+    it("should handle setting plannedDate", () => {
+      const script = buildUpdateTaskScript({ id: "task-123", plannedDate: "2024-06-15T12:00:00Z" });
+      expect(script).toContain("plannedDate");
+      expect(script).toContain("2024-06-15");
+    });
+
+    it("should handle clearing plannedDate with null", () => {
+      const script = buildUpdateTaskScript({ id: "task-123", plannedDate: null });
+      expect(script).toContain("plannedDate");
     });
   });
 
@@ -638,6 +660,15 @@ describe("task script builders", () => {
       });
       expect(script).toContain("dueAfter");
       expect(script).toContain("dueBefore");
+    });
+
+    it("should apply planned date filters", () => {
+      const script = buildGetTaskCountScript({
+        plannedAfter: "2024-01-01T00:00:00Z",
+        plannedBefore: "2024-12-31T23:59:59Z",
+      });
+      expect(script).toContain("plannedAfter");
+      expect(script).toContain("plannedBefore");
     });
 
     it("should not include pagination", () => {

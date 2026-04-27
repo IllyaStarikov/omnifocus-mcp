@@ -17,6 +17,8 @@ const taskFilterLogicFn = `
   var _dueBefore = args.dueBefore ? new Date(args.dueBefore) : null;
   var _deferAfter = args.deferAfter ? new Date(args.deferAfter) : null;
   var _deferBefore = args.deferBefore ? new Date(args.deferBefore) : null;
+  var _plannedAfter = args.plannedAfter ? new Date(args.plannedAfter) : null;
+  var _plannedBefore = args.plannedBefore ? new Date(args.plannedBefore) : null;
   var _searchQuery = args.search ? args.search.toLowerCase() : null;
 
   var tasks = source.filter(function(t) {
@@ -67,6 +69,10 @@ const taskFilterLogicFn = `
     // Filter by defer date range
     if (_deferAfter && (!t.deferDate || t.deferDate < _deferAfter)) return false;
     if (_deferBefore && (!t.deferDate || t.deferDate > _deferBefore)) return false;
+
+    // Filter by planned date range
+    if (_plannedAfter && (!t.plannedDate || t.plannedDate < _plannedAfter)) return false;
+    if (_plannedBefore && (!t.plannedDate || t.plannedDate > _plannedBefore)) return false;
 
     // Filter by search query
     if (_searchQuery) {
@@ -133,7 +139,7 @@ export function buildGetTaskScript(args: string | GetTaskArgs): string {
 }
 
 export function buildCreateTaskScript(args: CreateTaskArgs): string {
-  validateDateArgs(args as unknown as Record<string, unknown>, ["deferDate", "dueDate"]);
+  validateDateArgs(args as unknown as Record<string, unknown>, ["deferDate", "dueDate", "plannedDate"]);
   const argsJson = JSON.stringify(args);
   return `(() => {
   var args = JSON.parse(${JSON.stringify(argsJson)});
@@ -145,6 +151,7 @@ export function buildCreateTaskScript(args: CreateTaskArgs): string {
   if (args.flagged !== undefined) task.flagged = args.flagged;
   if (args.deferDate) task.deferDate = new Date(args.deferDate);
   if (args.dueDate) task.dueDate = new Date(args.dueDate);
+  if (args.plannedDate) task.plannedDate = new Date(args.plannedDate);
   if (args.estimatedMinutes !== undefined) task.estimatedMinutes = args.estimatedMinutes;
   if (args.completedByChildren !== undefined) task.completedByChildren = args.completedByChildren;
 
@@ -181,7 +188,7 @@ export function buildCreateTaskScript(args: CreateTaskArgs): string {
 }
 
 export function buildUpdateTaskScript(args: UpdateTaskArgs): string {
-  validateDateArgs(args as unknown as Record<string, unknown>, ["deferDate", "dueDate"]);
+  validateDateArgs(args as unknown as Record<string, unknown>, ["deferDate", "dueDate", "plannedDate"]);
   const argsJson = JSON.stringify(args);
   return `(() => {
   var args = JSON.parse(${JSON.stringify(argsJson)});
@@ -195,6 +202,7 @@ export function buildUpdateTaskScript(args: UpdateTaskArgs): string {
   if (args.flagged !== undefined) task.flagged = args.flagged;
   if (args.deferDate !== undefined) task.deferDate = args.deferDate ? new Date(args.deferDate) : null;
   if (args.dueDate !== undefined) task.dueDate = args.dueDate ? new Date(args.dueDate) : null;
+  if (args.plannedDate !== undefined) task.plannedDate = args.plannedDate ? new Date(args.plannedDate) : null;
   if (args.estimatedMinutes !== undefined) task.estimatedMinutes = args.estimatedMinutes;
   if (args.sequential !== undefined) task.sequential = args.sequential;
   if (args.completedByChildren !== undefined) task.completedByChildren = args.completedByChildren;
@@ -212,15 +220,19 @@ export function buildUpdateTaskScript(args: UpdateTaskArgs): string {
 })()`;
 }
 
-export function buildCompleteTaskScript(id: string): string {
-  const argsJson = JSON.stringify({ id });
+export function buildCompleteTaskScript(id: string, completionDate?: string): string {
+  const argsJson = JSON.stringify({ id, completionDate: completionDate ?? null });
   return `(() => {
   var args = JSON.parse(${JSON.stringify(argsJson)});
   ${serializeTaskFn}
 
   var task = byId(flattenedTasks, args.id);
   if (!task) throw new Error("Task not found: " + args.id);
-  task.markComplete();
+  if (args.completionDate) {
+    task.markComplete(new Date(args.completionDate));
+  } else {
+    task.markComplete();
+  }
   return JSON.stringify(serializeTask(task));
 })()`;
 }
@@ -466,7 +478,7 @@ export function buildRemoveTaskNotificationScript(taskId: string, notificationId
 export function buildBatchCreateTasksScript(args: BatchCreateTasksArgs): string {
   function validateBatchTaskDates(tasks: Record<string, unknown>[]): void {
     for (const task of tasks) {
-      validateDateArgs(task, ["deferDate", "dueDate"]);
+      validateDateArgs(task, ["deferDate", "dueDate", "plannedDate"]);
       if (Array.isArray(task.children)) {
         validateBatchTaskDates(task.children as Record<string, unknown>[]);
       }
@@ -496,6 +508,7 @@ export function buildBatchCreateTasksScript(args: BatchCreateTasksArgs): string 
     if (item.flagged !== undefined) task.flagged = item.flagged;
     if (item.deferDate) task.deferDate = new Date(item.deferDate);
     if (item.dueDate) task.dueDate = new Date(item.dueDate);
+    if (item.plannedDate) task.plannedDate = new Date(item.plannedDate);
     if (item.estimatedMinutes !== undefined) task.estimatedMinutes = item.estimatedMinutes;
     if (item.completedByChildren !== undefined) task.completedByChildren = item.completedByChildren;
 

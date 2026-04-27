@@ -67,7 +67,7 @@ export function buildGetProjectScript(idOrName: string): string {
 }
 
 export function buildCreateProjectScript(args: CreateProjectArgs): string {
-  validateDateArgs(args as unknown as Record<string, unknown>, ["deferDate", "dueDate"]);
+  validateDateArgs(args as unknown as Record<string, unknown>, ["deferDate", "dueDate", "plannedDate"]);
   const argsJson = JSON.stringify(args);
   return `(() => {
   var args = JSON.parse(${JSON.stringify(argsJson)});
@@ -91,6 +91,7 @@ export function buildCreateProjectScript(args: CreateProjectArgs): string {
   if (args.completedByChildren !== undefined) project.completedByChildren = args.completedByChildren;
   if (args.deferDate) project.deferDate = new Date(args.deferDate);
   if (args.dueDate) project.dueDate = new Date(args.dueDate);
+  if (args.plannedDate) project.plannedDate = new Date(args.plannedDate);
   if (args.flagged !== undefined) project.flagged = args.flagged;
 
   if (args.reviewInterval) {
@@ -119,7 +120,7 @@ export function buildCreateProjectScript(args: CreateProjectArgs): string {
 }
 
 export function buildUpdateProjectScript(args: UpdateProjectArgs): string {
-  validateDateArgs(args as unknown as Record<string, unknown>, ["deferDate", "dueDate"]);
+  validateDateArgs(args as unknown as Record<string, unknown>, ["deferDate", "dueDate", "plannedDate"]);
   const argsJson = JSON.stringify(args);
   return `(() => {
   var args = JSON.parse(${JSON.stringify(argsJson)});
@@ -136,6 +137,7 @@ export function buildUpdateProjectScript(args: UpdateProjectArgs): string {
   if (args.flagged !== undefined) project.flagged = args.flagged;
   if (args.deferDate !== undefined) project.deferDate = args.deferDate ? new Date(args.deferDate) : null;
   if (args.dueDate !== undefined) project.dueDate = args.dueDate ? new Date(args.dueDate) : null;
+  if (args.plannedDate !== undefined) project.plannedDate = args.plannedDate ? new Date(args.plannedDate) : null;
 
   if (args.status === "active") project.status = Project.Status.Active;
   else if (args.status === "onHold") project.status = Project.Status.OnHold;

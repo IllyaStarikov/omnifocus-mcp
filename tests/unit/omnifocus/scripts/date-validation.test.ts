@@ -49,6 +49,15 @@ describe("date validation in script builders", () => {
       ).toThrow("Invalid date for 'dueDate'");
     });
 
+    it("should throw for invalid plannedDate", () => {
+      expect(() =>
+        buildCreateTaskScript({
+          name: "Test",
+          plannedDate: "next week",
+        }),
+      ).toThrow("Invalid date for 'plannedDate'");
+    });
+
     it("should accept missing date fields (undefined)", () => {
       expect(() =>
         buildCreateTaskScript({ name: "Test" }),
@@ -82,6 +91,24 @@ describe("date validation in script builders", () => {
           deferDate: "invalid",
         }),
       ).toThrow("Invalid date for 'deferDate'");
+    });
+
+    it("should throw for invalid plannedDate", () => {
+      expect(() =>
+        buildUpdateTaskScript({
+          id: "task-123",
+          plannedDate: "not-an-iso-date",
+        }),
+      ).toThrow("Invalid date for 'plannedDate'");
+    });
+
+    it("should accept null plannedDate (clearing)", () => {
+      expect(() =>
+        buildUpdateTaskScript({
+          id: "task-123",
+          plannedDate: null,
+        }),
+      ).not.toThrow();
     });
   });
 
@@ -150,6 +177,27 @@ describe("date validation in script builders", () => {
       ).toThrow("Invalid date for 'dueDate'");
     });
 
+    it("should throw for invalid plannedDate in batch tasks", () => {
+      expect(() =>
+        buildBatchCreateTasksScript({
+          tasks: [
+            { name: "Task 1", plannedDate: "bad-planned" },
+          ],
+        }),
+      ).toThrow("Invalid date for 'plannedDate'");
+    });
+
+    it("should validate plannedDate in nested children", () => {
+      expect(() =>
+        buildBatchCreateTasksScript({
+          tasks: [{
+            name: "Parent",
+            children: [{ name: "Child", plannedDate: "nope" }],
+          }],
+        }),
+      ).toThrow("Invalid date for 'plannedDate'");
+    });
+
     it("should accept tasks with no dates", () => {
       expect(() =>
         buildBatchCreateTasksScript({
@@ -177,6 +225,15 @@ describe("date validation in script builders", () => {
           dueDate: "nope",
         }),
       ).toThrow("Invalid date for 'dueDate'");
+    });
+
+    it("should throw for invalid plannedDate", () => {
+      expect(() =>
+        buildCreateProjectScript({
+          name: "Project",
+          plannedDate: "soonish",
+        }),
+      ).toThrow("Invalid date for 'plannedDate'");
     });
   });
 
@@ -206,6 +263,24 @@ describe("date validation in script builders", () => {
           deferDate: "yesterday",
         }),
       ).toThrow("Invalid date for 'deferDate'");
+    });
+
+    it("should throw for invalid plannedDate", () => {
+      expect(() =>
+        buildUpdateProjectScript({
+          id: "proj-123",
+          plannedDate: "next quarter",
+        }),
+      ).toThrow("Invalid date for 'plannedDate'");
+    });
+
+    it("should accept null plannedDate (clearing)", () => {
+      expect(() =>
+        buildUpdateProjectScript({
+          id: "proj-123",
+          plannedDate: null,
+        }),
+      ).not.toThrow();
     });
   });
 });

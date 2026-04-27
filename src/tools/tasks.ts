@@ -15,6 +15,7 @@ const batchTaskItemSchema: z.ZodType<any> = z.lazy(() =>
     flagged: z.boolean().optional().describe("Whether to flag"),
     deferDate: z.string().optional().describe("Defer date (ISO 8601)"),
     dueDate: z.string().optional().describe("Due date (ISO 8601)"),
+    plannedDate: z.string().optional().describe("Planned date (ISO 8601)"),
     estimatedMinutes: z.number().min(0).optional().describe("Estimated duration in minutes"),
     completedByChildren: z.boolean().optional().describe("Auto-complete when children complete"),
     tags: z.array(z.string()).optional().describe("Tag names"),
@@ -39,6 +40,8 @@ export function registerTaskTools(server: McpServer, client: OmniFocusClient): v
       dueBefore: z.string().optional().describe("Filter tasks due before this ISO date"),
       deferAfter: z.string().optional().describe("Filter tasks deferred after this ISO date"),
       deferBefore: z.string().optional().describe("Filter tasks deferred before this ISO date"),
+      plannedAfter: z.string().optional().describe("Filter tasks planned after this ISO date"),
+      plannedBefore: z.string().optional().describe("Filter tasks planned before this ISO date"),
       search: z.string().optional().describe("Full-text search in task name and note"),
       taskStatus: z.enum(["available", "remaining", "completed", "dropped"]).optional().describe("Filter by task status"),
       limit: z.number().min(1).max(1000).optional().describe("Maximum results (default 100)"),
@@ -83,6 +86,7 @@ export function registerTaskTools(server: McpServer, client: OmniFocusClient): v
       flagged: z.boolean().optional().describe("Whether to flag the task"),
       deferDate: z.string().optional().describe("Defer date (ISO 8601)"),
       dueDate: z.string().optional().describe("Due date (ISO 8601)"),
+      plannedDate: z.string().optional().describe("Planned date (ISO 8601)"),
       estimatedMinutes: z.number().min(0).optional().describe("Estimated duration in minutes"),
       completedByChildren: z.boolean().optional().describe("Auto-complete when all children are completed"),
       projectId: z.string().optional().describe("Project ID to add task to"),
@@ -111,6 +115,7 @@ export function registerTaskTools(server: McpServer, client: OmniFocusClient): v
       flagged: z.boolean().optional().describe("New flagged status"),
       deferDate: z.string().nullable().optional().describe("New defer date (ISO 8601) or null to clear"),
       dueDate: z.string().nullable().optional().describe("New due date (ISO 8601) or null to clear"),
+      plannedDate: z.string().nullable().optional().describe("New planned date (ISO 8601) or null to clear"),
       estimatedMinutes: z.number().min(0).nullable().optional().describe("New estimated minutes or null to clear"),
       sequential: z.boolean().optional().describe("Whether subtasks must be completed in order"),
       completedByChildren: z.boolean().optional().describe("Auto-complete when all children are completed"),
@@ -135,10 +140,14 @@ export function registerTaskTools(server: McpServer, client: OmniFocusClient): v
     "Mark a task as completed",
     {
       id: z.string().describe("The task ID to complete"),
+      completionDate: z
+        .string()
+        .optional()
+        .describe("Optional ISO 8601 completion date to backdate the completion (defaults to now)"),
     },
-    async ({ id }) => {
+    async ({ id, completionDate }) => {
       try {
-        const task = await client.completeTask(id);
+        const task = await client.completeTask(id, completionDate);
         return { content: [{ type: "text" as const, text: JSON.stringify(task, null, 2) }] };
       } catch (error) {
         const { message } = formatMcpError(error);
@@ -460,6 +469,8 @@ export function registerTaskTools(server: McpServer, client: OmniFocusClient): v
       dueBefore: z.string().optional().describe("Filter tasks due before this ISO date"),
       deferAfter: z.string().optional().describe("Filter tasks deferred after this ISO date"),
       deferBefore: z.string().optional().describe("Filter tasks deferred before this ISO date"),
+      plannedAfter: z.string().optional().describe("Filter tasks planned after this ISO date"),
+      plannedBefore: z.string().optional().describe("Filter tasks planned before this ISO date"),
       search: z.string().optional().describe("Full-text search in task name and note"),
       taskStatus: z.enum(["available", "remaining", "completed", "dropped"]).optional().describe("Filter by task status"),
     },

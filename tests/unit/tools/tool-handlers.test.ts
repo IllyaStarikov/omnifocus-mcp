@@ -141,6 +141,8 @@ describe("Tool handler tests via MCP protocol", () => {
           dueBefore: "2024-12-31T23:59:59Z",
           deferAfter: "2024-01-01T00:00:00Z",
           deferBefore: "2024-06-01T00:00:00Z",
+          plannedAfter: "2024-01-01T00:00:00Z",
+          plannedBefore: "2024-06-01T00:00:00Z",
         },
       });
       const parsed = parseResult(result);
@@ -151,6 +153,8 @@ describe("Tool handler tests via MCP protocol", () => {
       expect(scriptArg).toContain("dueBefore");
       expect(scriptArg).toContain("deferAfter");
       expect(scriptArg).toContain("deferBefore");
+      expect(scriptArg).toContain("plannedAfter");
+      expect(scriptArg).toContain("plannedBefore");
     });
 
     it("should list tasks with taskStatus filter", async () => {
@@ -293,6 +297,7 @@ describe("Tool handler tests via MCP protocol", () => {
           flagged: true,
           deferDate: "2024-01-01T00:00:00Z",
           dueDate: "2024-12-31T23:59:59Z",
+          plannedDate: "2024-06-15T12:00:00Z",
           estimatedMinutes: 30,
           projectId: "proj-1",
           tags: ["work", "urgent"],
@@ -301,6 +306,8 @@ describe("Tool handler tests via MCP protocol", () => {
 
       const parsed = parseResult(result);
       expect(parsed.id).toBe("task-abc-123");
+      const scriptArg = mockRunOmniJSJson.mock.calls[0][0];
+      expect(scriptArg).toContain("plannedDate");
     });
 
     it("should create task with repetitionRule", async () => {
@@ -354,6 +361,17 @@ describe("Tool handler tests via MCP protocol", () => {
 
       const scriptArg = mockRunOmniJSJson.mock.calls[0][0];
       expect(scriptArg).toContain("dueDate");
+    });
+
+    it("should clear plannedDate with null", async () => {
+      mockRunOmniJSJson.mockResolvedValue({ ...mockTask, plannedDate: null });
+      await client.callTool({
+        name: "update_task",
+        arguments: { id: "task-abc-123", plannedDate: null },
+      });
+
+      const scriptArg = mockRunOmniJSJson.mock.calls[0][0];
+      expect(scriptArg).toContain("plannedDate");
     });
   });
 
@@ -692,6 +710,18 @@ describe("Tool handler tests via MCP protocol", () => {
       const scriptArg = mockRunOmniJSJson.mock.calls[0][0];
       expect(scriptArg).toContain("dueAfter");
       expect(scriptArg).toContain("dueBefore");
+    });
+
+    it("should return count with planned date filters", async () => {
+      mockRunOmniJSJson.mockResolvedValue({ count: 2 });
+      await client.callTool({
+        name: "get_task_count",
+        arguments: { plannedAfter: "2024-01-01T00:00:00Z", plannedBefore: "2024-12-31T23:59:59Z" },
+      });
+
+      const scriptArg = mockRunOmniJSJson.mock.calls[0][0];
+      expect(scriptArg).toContain("plannedAfter");
+      expect(scriptArg).toContain("plannedBefore");
     });
   });
 

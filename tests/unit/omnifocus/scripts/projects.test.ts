@@ -103,11 +103,13 @@ describe("project script builders", () => {
         flagged: true,
         deferDate: "2024-01-01T00:00:00Z",
         dueDate: "2024-12-31T23:59:59Z",
+        plannedDate: "2024-06-15T12:00:00Z",
       });
       expect(script).toContain("Some notes");
       expect(script).toContain("sequential");
       expect(script).toContain("containsSingletonActions");
       expect(script).toContain("flagged");
+      expect(script).toContain("plannedDate");
     });
 
     it("should handle review interval", () => {
@@ -159,9 +161,10 @@ describe("project script builders", () => {
     });
 
     it("should handle clearing dates with null", () => {
-      const script = buildUpdateProjectScript({ id: "proj-123", dueDate: null, deferDate: null });
+      const script = buildUpdateProjectScript({ id: "proj-123", dueDate: null, deferDate: null, plannedDate: null });
       expect(script).toContain("dueDate");
       expect(script).toContain("deferDate");
+      expect(script).toContain("plannedDate");
     });
 
     it("should handle singleActionList update", () => {

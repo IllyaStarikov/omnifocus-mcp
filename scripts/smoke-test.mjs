@@ -299,6 +299,15 @@ await test("list_tasks: with date filters (dueAfter/dueBefore)", async () => {
   assert(Array.isArray(result), `expected array, got ${typeof result}`);
 });
 
+await test("list_tasks: with planned date filters (plannedAfter/plannedBefore)", async () => {
+  const result = await runOmniJSJson(tasks.buildListTasksScript({
+    plannedAfter: "2020-01-01T00:00:00Z",
+    plannedBefore: "2030-12-31T23:59:59Z",
+    limit: 5,
+  }));
+  assert(Array.isArray(result), `expected array, got ${typeof result}`);
+});
+
 await test("list_tasks: with projectId filter", async () => {
   const result = await runOmniJSJson(tasks.buildListTasksScript({ projectId: ids.project, limit: 10 }));
   assert(Array.isArray(result), `expected array, got ${typeof result}`);
@@ -353,6 +362,7 @@ await test("create_task: Task1 with all fields", async () => {
     flagged: true,
     deferDate: "2026-03-01T09:00:00Z",
     dueDate: "2026-03-15T17:00:00Z",
+    plannedDate: "2026-03-10T12:00:00Z",
     estimatedMinutes: 30,
     projectName: "__MCPTEST__Project",
     tags: ["__MCPTEST__TagA", "__MCPTEST__TagB"],
@@ -362,6 +372,7 @@ await test("create_task: Task1 with all fields", async () => {
   assert(result.note === "Test note for Task1", `note=${result.note}`);
   assert(result.flagged === true, `flagged=${result.flagged}`);
   assert(result.estimatedMinutes === 30, `estimatedMinutes=${result.estimatedMinutes}`);
+  assert(result.plannedDate !== null, `plannedDate should be set, got ${result.plannedDate}`);
   const tagNames = (result.tags || []).map(t => t.name);
   assert(tagNames.includes("__MCPTEST__TagA"), `tags missing TagA: ${JSON.stringify(tagNames)}`);
   assert(tagNames.includes("__MCPTEST__TagB"), `tags missing TagB: ${JSON.stringify(tagNames)}`);
@@ -431,17 +442,19 @@ await test("get_project_tasks: with includeCompleted=true", async () => {
   assert(Array.isArray(result), `expected array, got ${typeof result}`);
 });
 
-await test("update_task: Task1 — change name, note, clear dueDate, set estimatedMinutes", async () => {
+await test("update_task: Task1 — change name, note, clear dueDate + plannedDate, set estimatedMinutes", async () => {
   const result = await runOmniJSJson(tasks.buildUpdateTaskScript({
     id: ids.task1,
     name: "__MCPTEST__Task1Updated",
     note: "Updated note",
     dueDate: null,
+    plannedDate: null,
     estimatedMinutes: 60,
   }));
   assert(result.name === "__MCPTEST__Task1Updated", `name=${result.name}`);
   assert(result.note === "Updated note", `note=${result.note}`);
   assert(result.dueDate === null, `dueDate=${result.dueDate}`);
+  assert(result.plannedDate === null, `plannedDate=${result.plannedDate}`);
   assert(result.estimatedMinutes === 60, `estimatedMinutes=${result.estimatedMinutes}`);
 });
 
@@ -675,7 +688,7 @@ await test("batch_delete_tasks: [Child1, Child2, duplicatedChild]", async () => 
 
 console.log("\n📁 Phase 4: Project Mutations");
 
-await test("update_project: rename, note, flagged, deferDate, dueDate", async () => {
+await test("update_project: rename, note, flagged, deferDate, dueDate, plannedDate", async () => {
   const result = await runOmniJSJson(projects.buildUpdateProjectScript({
     id: ids.project,
     name: "__MCPTEST__ProjectRenamed",
@@ -683,21 +696,25 @@ await test("update_project: rename, note, flagged, deferDate, dueDate", async ()
     flagged: true,
     deferDate: "2026-03-01T09:00:00Z",
     dueDate: "2026-06-01T17:00:00Z",
+    plannedDate: "2026-04-15T12:00:00Z",
   }));
   assert(result.name === "__MCPTEST__ProjectRenamed", `name=${result.name}`);
   assert(result.note === "Project test note", `note=${result.note}`);
   assert(result.flagged === true, `flagged=${result.flagged}`);
   assert(result.deferDate !== null, `deferDate should be set`);
   assert(result.dueDate !== null, `dueDate should be set`);
+  assert(result.plannedDate !== null, `plannedDate should be set, got ${result.plannedDate}`);
 });
 
-await test("update_project: clear dueDate, set sequential=false", async () => {
+await test("update_project: clear dueDate + plannedDate, set sequential=false", async () => {
   const result = await runOmniJSJson(projects.buildUpdateProjectScript({
     id: ids.project,
     dueDate: null,
+    plannedDate: null,
     sequential: false,
   }));
   assert(result.dueDate === null, `dueDate=${result.dueDate}`);
+  assert(result.plannedDate === null, `plannedDate=${result.plannedDate}`);
   assert(result.sequential === false, `sequential=${result.sequential}`);
 });
 

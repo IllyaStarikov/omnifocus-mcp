@@ -18,8 +18,9 @@ describe("serializer templates", () => {
     it("should contain all required task field names", () => {
       const fields = [
         "id", "name", "note", "url", "flagged", "completed", "dropped",
-        "deferDate", "dueDate", "completionDate", "droppedDate",
+        "deferDate", "dueDate", "plannedDate", "completionDate", "droppedDate",
         "added", "modified", "effectiveDueDate", "effectiveDeferDate",
+        "effectivePlannedDate",
         "effectiveFlagged", "estimatedMinutes", "containingProjectId",
         "containingProjectName", "parentTaskId", "tags", "hasChildren",
         "sequential", "completedByChildren", "inInbox", "repetitionRule",
@@ -43,6 +44,8 @@ describe("serializer templates", () => {
     it("should handle null dates with ternary operators", () => {
       expect(serializeTaskFn).toContain("task.deferDate ? task.deferDate.toISOString() : null");
       expect(serializeTaskFn).toContain("task.dueDate ? task.dueDate.toISOString() : null");
+      expect(serializeTaskFn).toContain("task.plannedDate ? task.plannedDate.toISOString() : null");
+      expect(serializeTaskFn).toContain("task.effectivePlannedDate ? task.effectivePlannedDate.toISOString() : null");
       expect(serializeTaskFn).toContain("task.completionDate ? task.completionDate.toISOString() : null");
     });
 
@@ -98,7 +101,7 @@ describe("serializer templates", () => {
     it("should contain all required project field names", () => {
       const fields = [
         "id", "name", "note", "url", "status", "flagged", "completed",
-        "deferDate", "dueDate", "completionDate", "droppedDate",
+        "deferDate", "dueDate", "plannedDate", "completionDate", "droppedDate",
         "added", "modified", "estimatedMinutes", "containingFolderId",
         "containingFolderName", "tags", "sequential", "singleActionList",
         "completedByChildren", "taskCount", "remainingTaskCount",

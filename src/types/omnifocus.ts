@@ -16,6 +16,8 @@ export interface TaskJSON {
   modified: string | null;
   effectiveDueDate: string | null;
   effectiveDeferDate: string | null;
+  plannedDate: string | null;
+  effectivePlannedDate: string | null;
   effectiveFlagged: boolean;
   estimatedMinutes: number | null;
   containingProjectId: string | null;
@@ -46,6 +48,7 @@ export interface ProjectJSON {
   completed: boolean;
   deferDate: string | null;
   dueDate: string | null;
+  plannedDate: string | null;
   completionDate: string | null;
   droppedDate: string | null;
   added: string | null;
@@ -136,6 +139,8 @@ export interface ListTasksArgs {
   dueBefore?: string;
   deferAfter?: string;
   deferBefore?: string;
+  plannedAfter?: string;
+  plannedBefore?: string;
   search?: string;
   taskStatus?: "available" | "remaining" | "completed" | "dropped";
   limit?: number;
@@ -148,6 +153,7 @@ export interface CreateTaskArgs {
   flagged?: boolean;
   deferDate?: string;
   dueDate?: string;
+  plannedDate?: string;
   estimatedMinutes?: number;
   completedByChildren?: boolean;
   projectId?: string;
@@ -166,6 +172,7 @@ export interface UpdateTaskArgs {
   flagged?: boolean;
   deferDate?: string | null;
   dueDate?: string | null;
+  plannedDate?: string | null;
   estimatedMinutes?: number | null;
   sequential?: boolean;
   completedByChildren?: boolean;
@@ -226,6 +233,7 @@ export interface CreateProjectArgs {
   completedByChildren?: boolean;
   deferDate?: string;
   dueDate?: string;
+  plannedDate?: string;
   flagged?: boolean;
   tags?: string[];
   reviewInterval?: { steps: number; unit: string };
@@ -241,6 +249,7 @@ export interface UpdateProjectArgs {
   completedByChildren?: boolean;
   deferDate?: string | null;
   dueDate?: string | null;
+  plannedDate?: string | null;
   flagged?: boolean;
   reviewInterval?: { steps: number; unit: string };
 }
@@ -288,6 +297,7 @@ export interface BatchCreateTaskItem {
   flagged?: boolean;
   deferDate?: string;
   dueDate?: string;
+  plannedDate?: string;
   estimatedMinutes?: number;
   completedByChildren?: boolean;
   tags?: string[];
