@@ -415,6 +415,41 @@ await test("list_tasks: flagged:true surfaces tasks whose parent project is flag
   await runOmniJSJson(projects.buildUpdateProjectScript({ id: ids.project, flagged: false }));
 });
 
+await test("get_database_summary: flaggedTaskCount includes child of flagged project (effectiveFlagged inheritance)", async () => {
+  // Project starts unflagged (previous test cleaned up). Flag it and verify summary grows.
+  const before = await runOmniJSJson(database.buildDatabaseSummaryScript());
+  await runOmniJSJson(projects.buildUpdateProjectScript({ id: ids.project, flagged: true }));
+  const after = await runOmniJSJson(database.buildDatabaseSummaryScript());
+  assert(
+    after.flaggedTaskCount > before.flaggedTaskCount,
+    `flaggedTaskCount should grow when project becomes flagged (children inherit effectiveFlagged); before=${before.flaggedTaskCount}, after=${after.flaggedTaskCount}`
+  );
+  // Unflag for downstream tests.
+  await runOmniJSJson(projects.buildUpdateProjectScript({ id: ids.project, flagged: false }));
+});
+
+await test("get_database_summary: flaggedTaskCount counts an overdue flagged task (broader than 'available' scope)", async () => {
+  const before = await runOmniJSJson(database.buildDatabaseSummaryScript());
+  // Own due date 2 days ago + flagged: taskStatus is Overdue, not Available.
+  // Pre-fix the count was scoped to Available, so this task would be silently dropped.
+  const past = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString();
+  const overdueFlag = await runOmniJSJson(tasks.buildCreateTaskScript({
+    name: "__MCPTEST__OverdueFlaggedTask",
+    projectId: ids.project,
+    flagged: true,
+    dueDate: past,
+  }));
+  ids.overdueFlag = overdueFlag.id;
+  assert(overdueFlag.flagged === true, `expected own flagged=true, got ${overdueFlag.flagged}`);
+  assert(overdueFlag.taskStatus === "overdue", `expected taskStatus 'overdue', got ${overdueFlag.taskStatus}`);
+
+  const after = await runOmniJSJson(database.buildDatabaseSummaryScript());
+  assert(
+    after.flaggedTaskCount > before.flaggedTaskCount,
+    `Overdue flagged task must count toward flaggedTaskCount; before=${before.flaggedTaskCount}, after=${after.flaggedTaskCount}`
+  );
+});
+
 await test("get_task: returns taskStatus enum string", async () => {
   const t = await runOmniJSJson(tasks.buildGetTaskScript(ids.inheritedDueChild));
   assert(typeof t.taskStatus === "string", `taskStatus should be string, got ${typeof t.taskStatus}`);

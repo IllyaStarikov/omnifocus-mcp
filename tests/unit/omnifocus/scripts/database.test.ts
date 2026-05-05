@@ -36,9 +36,19 @@ describe("database script builders", () => {
       expect(script).not.toMatch(/available\.filter\([^)]*dueDate/);
     });
 
-    it("should count flagged tasks", () => {
+    it("counts flagged by effectiveFlagged so children of a flagged project are included", () => {
       const script = buildDatabaseSummaryScript();
-      expect(script).toContain("flagged");
+      expect(script).toContain("t.effectiveFlagged");
+      // The buggy pattern was `return t.flagged;` — pin so it can't come back.
+      expect(script).not.toMatch(/return\s+t\.flagged\b/);
+    });
+
+    it("counts flagged across all non-Completed/Dropped statuses, not just 'available'", () => {
+      const script = buildDatabaseSummaryScript();
+      // Scoping flagged from `available` would silently drop flagged Overdue/DueSoon/Blocked/Next.
+      expect(script).not.toMatch(/available\.filter\([^)]*flagged/);
+      expect(script).toContain("Task.Status.Completed");
+      expect(script).toContain("Task.Status.Dropped");
     });
   });
 
@@ -102,6 +112,17 @@ describe("database script builders", () => {
       expect(script).toContain("Task.Status.Overdue");
       expect(script).toContain("Task.Status.DueSoon");
       expect(script).not.toMatch(/available\.filter\([^)]*dueDate/);
+    });
+
+    it("dump summary counts flagged by effectiveFlagged so children of a flagged project are included", () => {
+      const script = buildDumpDatabaseScript();
+      expect(script).toContain("t.effectiveFlagged");
+      expect(script).not.toMatch(/return\s+t\.flagged\b/);
+    });
+
+    it("dump summary counts flagged across all non-Completed/Dropped statuses, not just 'available'", () => {
+      const script = buildDumpDatabaseScript();
+      expect(script).not.toMatch(/available\.filter\([^)]*flagged/);
     });
 
     it("should pass hideRecurringDuplicates option", () => {
