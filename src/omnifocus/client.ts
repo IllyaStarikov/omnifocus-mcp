@@ -1,7 +1,7 @@
-import { runOmniJSJson } from "./executor.js";
+import { runOmniJSJson, runJXAJson } from "./executor.js";
 import { Cache } from "./cache.js";
 import { config } from "../config.js";
-import { buildDatabaseSummaryScript, buildSearchScript, buildDumpDatabaseScript, buildSaveDatabaseScript } from "./scripts/database.js";
+import { buildDatabaseSummaryScript, buildSearchScript, buildDumpDatabaseScript, buildSaveDatabaseScript, buildSyncDatabaseScript } from "./scripts/database.js";
 import { buildListFoldersScript, buildGetFolderScript, buildCreateFolderScript, buildUpdateFolderScript, buildDeleteFolderScript } from "./scripts/folders.js";
 import { buildListTagsScript, buildGetTagScript, buildCreateTagScript, buildUpdateTagScript, buildDeleteTagScript } from "./scripts/tags.js";
 import { buildListPerspectivesScript, buildGetPerspectiveTasksScript } from "./scripts/perspectives.js";
@@ -110,6 +110,10 @@ export class OmniFocusClient {
 
   async saveDatabase(): Promise<{ saved: boolean }> {
     return runOmniJSJson<{ saved: boolean }>(buildSaveDatabaseScript());
+  }
+
+  async syncDatabase(): Promise<{ syncTriggered: boolean }> {
+    return runJXAJson<{ syncTriggered: boolean }>(buildSyncDatabaseScript());
   }
 
   // ─── Tasks ─────────────────────────────────────────────────────────

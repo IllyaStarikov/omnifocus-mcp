@@ -4,6 +4,7 @@ import {
   buildSearchScript,
   buildDumpDatabaseScript,
   buildSaveDatabaseScript,
+  buildSyncDatabaseScript,
 } from "../../../../src/omnifocus/scripts/database.js";
 
 describe("database script builders", () => {
@@ -142,6 +143,28 @@ describe("database script builders", () => {
     it("should return saved status", () => {
       const script = buildSaveDatabaseScript();
       expect(script).toContain("saved");
+    });
+  });
+
+  describe("buildSyncDatabaseScript", () => {
+    it("should call Application.synchronize()", () => {
+      const script = buildSyncDatabaseScript();
+      expect(script).toContain('Application("OmniFocus")');
+      expect(script).toContain("synchronize");
+    });
+
+    it("should return syncTriggered status", () => {
+      const script = buildSyncDatabaseScript();
+      expect(script).toContain("syncTriggered");
+    });
+
+    it("should be JXA, NOT OmniJS (no evaluateJavascript wrapper)", () => {
+      // Sync is a Mac/JXA Apple Events command — not exposed in the OmniJS sandbox.
+      // The script must run via runJXA, not runOmniJS.
+      const script = buildSyncDatabaseScript();
+      expect(script).not.toContain("evaluateJavascript");
+      expect(script).not.toContain("document.save");
+      expect(script).not.toContain("flattenedTasks");
     });
   });
 });

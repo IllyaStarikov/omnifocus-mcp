@@ -356,10 +356,12 @@ export function registerTaskTools(server: McpServer, client: OmniFocusClient): v
       projectId: z.string().optional().describe("Project ID to add tasks to"),
       projectName: z.string().optional().describe("Project name to add tasks to"),
       parentTaskId: z.string().optional().describe("Parent task ID for subtasks"),
+      sync: z.boolean().optional().describe("Trigger an OmniFocus sync after the batch completes (default false). Skips on error."),
     },
-    async (args) => {
+    async ({ sync, ...args }) => {
       try {
         const tasks = await client.batchCreateTasks(args);
+        if (sync) await client.syncDatabase();
         return { content: [{ type: "text" as const, text: JSON.stringify(tasks, null, 2) }] };
       } catch (error) {
         const { message } = formatMcpError(error);
@@ -425,10 +427,12 @@ export function registerTaskTools(server: McpServer, client: OmniFocusClient): v
     "Delete multiple tasks at once. More efficient than deleting one by one.",
     {
       taskIds: z.array(z.string()).min(1).describe("Array of task IDs to delete"),
+      sync: z.boolean().optional().describe("Trigger an OmniFocus sync after the batch completes (default false). Skips on error."),
     },
-    async (args) => {
+    async ({ sync, ...args }) => {
       try {
         const results = await client.batchDeleteTasks(args);
+        if (sync) await client.syncDatabase();
         return { content: [{ type: "text" as const, text: JSON.stringify(results, null, 2) }] };
       } catch (error) {
         const { message } = formatMcpError(error);
@@ -442,10 +446,12 @@ export function registerTaskTools(server: McpServer, client: OmniFocusClient): v
     "Complete multiple tasks at once. More efficient than completing one by one.",
     {
       taskIds: z.array(z.string()).min(1).describe("Array of task IDs to complete"),
+      sync: z.boolean().optional().describe("Trigger an OmniFocus sync after the batch completes (default false). Skips on error."),
     },
-    async (args) => {
+    async ({ sync, ...args }) => {
       try {
         const results = await client.batchCompleteTasks(args);
+        if (sync) await client.syncDatabase();
         return { content: [{ type: "text" as const, text: JSON.stringify(results, null, 2) }] };
       } catch (error) {
         const { message } = formatMcpError(error);

@@ -12,7 +12,7 @@ vi.mock("node:util", () => ({
 }));
 
 // Import after mocking
-const { runOmniJS, runOmniJSJson } = await import("../../../src/omnifocus/executor.js");
+const { runOmniJS, runOmniJSJson, runJXA, runJXAJson } = await import("../../../src/omnifocus/executor.js");
 
 describe("runOmniJS", () => {
   beforeEach(() => {
@@ -112,5 +112,56 @@ describe("runOmniJSJson", () => {
   it("should include raw response preview in thrown error", async () => {
     mockExecFileAsync.mockResolvedValue({ stdout: "not-json-data", stderr: "" });
     await expect(runOmniJSJson("test")).rejects.toThrow("not-json-data");
+  });
+});
+
+describe("runJXA", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("should call osascript with the script verbatim (no evaluateJavascript wrapping)", async () => {
+    mockExecFileAsync.mockResolvedValue({ stdout: "ok", stderr: "" });
+    const script = '(() => { Application("OmniFocus").synchronize(); return "{}"; })()';
+    await runJXA(script);
+    expect(mockExecFileAsync).toHaveBeenCalledWith(
+      "osascript",
+      ["-l", "JavaScript", "-e", script],
+      expect.objectContaining({ timeout: expect.any(Number) }),
+    );
+    // The OmniJS path wraps with evaluateJavascript; raw JXA should NOT
+    const arg = mockExecFileAsync.mock.calls[0][1][3];
+    expect(arg).not.toContain("evaluateJavascript");
+  });
+
+  it("should return trimmed stdout", async () => {
+    mockExecFileAsync.mockResolvedValue({ stdout: "  hi  \n", stderr: "" });
+    expect(await runJXA("any")).toBe("hi");
+  });
+
+  it("should propagate executor errors via parseExecutorError", async () => {
+    mockExecFileAsync.mockRejectedValue({
+      stderr: "execution error: Application is not running (-600)",
+      code: 1,
+      killed: false,
+    });
+    await expect(runJXA("any")).rejects.toThrow("not running");
+  });
+});
+
+describe("runJXAJson", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("should parse JSON responses", async () => {
+    mockExecFileAsync.mockResolvedValue({ stdout: '{"syncTriggered":true}', stderr: "" });
+    const result = await runJXAJson<{ syncTriggered: boolean }>("any");
+    expect(result).toEqual({ syncTriggered: true });
+  });
+
+  it("should throw on invalid JSON", async () => {
+    mockExecFileAsync.mockResolvedValue({ stdout: "garbage", stderr: "" });
+    await expect(runJXAJson("any")).rejects.toThrow("Failed to parse");
   });
 });

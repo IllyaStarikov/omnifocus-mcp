@@ -5,7 +5,7 @@
 
 > ✔️ Turn prompts into projects.
 
-Feature-complete [Model Context Protocol](https://modelcontextprotocol.io/) server for [OmniFocus](https://www.omnigroup.com/omnifocus). Full read/write access to tasks, projects, folders, tags, and perspectives — 50 tools, 2 resources, and 3 prompts.
+Feature-complete [Model Context Protocol](https://modelcontextprotocol.io/) server for [OmniFocus](https://www.omnigroup.com/omnifocus). Full read/write access to tasks, projects, folders, tags, and perspectives — 51 tools, 2 resources, and 3 prompts.
 
 Uses [Omni Automation](https://omni-automation.com/) (OmniJS) under the hood, executing scripts via JXA and `osascript`. This is why macOS is required.
 
@@ -225,7 +225,7 @@ No data leaves your machine — all communication happens locally via `osascript
 | `list_perspectives` | List perspectives (built-in and/or custom) |
 | `get_perspective_tasks` | Get tasks shown in a specific perspective |
 
-### Database (4)
+### Database (5)
 
 | Tool | Description |
 |------|-------------|
@@ -233,6 +233,7 @@ No data leaves your machine — all communication happens locally via `osascript
 | `search` | Search across all items (tasks, projects, folders, tags) by name or note |
 | `dump_database` | Dump the entire database in a single call |
 | `save_database` | Explicitly save the database to disk |
+| `sync_database` | Trigger an OmniFocus sync to push local changes to OmniSync and pull updates from other devices. Call once at the end of a chain of mutations. The `batch_*` tools also accept `sync: true` to run a sync automatically after the batch completes. |
 
 ## Resources
 

@@ -26,7 +26,7 @@ describe("MCP Protocol Integration", () => {
     await cleanup();
   });
 
-  it("should list all 50 tools", async () => {
+  it("should list all 51 tools", async () => {
     const result = await client.listTools();
     const toolNames = result.tools.map((t) => t.name).sort();
 
@@ -76,6 +76,7 @@ describe("MCP Protocol Integration", () => {
       "save_database",
       "search",
       "set_task_tags",
+      "sync_database",
       "uncomplete_task",
       "update_folder",
       "update_project",
@@ -112,6 +113,7 @@ describe("MCP Protocol Integration", () => {
     expect(toolNames).toContain("search");
     expect(toolNames).toContain("dump_database");
     expect(toolNames).toContain("save_database");
+    expect(toolNames).toContain("sync_database");
 
     // Task tools
     expect(toolNames).toContain("list_tasks");

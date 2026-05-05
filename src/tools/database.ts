@@ -78,4 +78,21 @@ export function registerDatabaseTools(server: McpServer, client: OmniFocusClient
       }
     },
   );
+
+  server.tool(
+    "sync_database",
+    "Trigger an OmniFocus sync to push local changes to OmniSync and pull updates from other devices. CALL THIS ONCE at the end of any session that mutated data — especially after batch_create_tasks, batch_complete_tasks, batch_delete_tasks, or any sequence of multiple create/update/delete/move operations. Do NOT call after every individual mutation; sync once at the end of the chain. Returns immediately while sync runs in the background.",
+    {},
+    async () => {
+      try {
+        const result = await client.syncDatabase();
+        return {
+          content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }],
+        };
+      } catch (error) {
+        const { message } = formatMcpError(error);
+        return { content: [{ type: "text" as const, text: message }], isError: true };
+      }
+    },
+  );
 }

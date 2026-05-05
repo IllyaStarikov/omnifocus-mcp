@@ -12,10 +12,13 @@ import { mockPerspectiveList } from "../../fixtures/perspectives.js";
 vi.mock("../../../src/omnifocus/executor.js", () => ({
   runOmniJS: vi.fn(),
   runOmniJSJson: vi.fn(),
+  runJXA: vi.fn(),
+  runJXAJson: vi.fn(),
 }));
 
-import { runOmniJSJson } from "../../../src/omnifocus/executor.js";
+import { runOmniJSJson, runJXAJson } from "../../../src/omnifocus/executor.js";
 const mockRunOmniJSJson = vi.mocked(runOmniJSJson);
+const mockRunJXAJson = vi.mocked(runJXAJson);
 
 describe("OmniFocusClient", () => {
   let client: OmniFocusClient;
@@ -87,6 +90,32 @@ describe("OmniFocusClient", () => {
       mockRunOmniJSJson.mockResolvedValue({ saved: true });
       const result = await client.saveDatabase();
       expect(result.saved).toBe(true);
+    });
+  });
+
+  describe("syncDatabase", () => {
+    it("should call runJXAJson and return syncTriggered status", async () => {
+      mockRunJXAJson.mockResolvedValue({ syncTriggered: true });
+      const result = await client.syncDatabase();
+      expect(result.syncTriggered).toBe(true);
+      expect(mockRunJXAJson).toHaveBeenCalledTimes(1);
+    });
+
+    it("should pass a JXA script (not OmniJS) that calls Application.synchronize", async () => {
+      mockRunJXAJson.mockResolvedValue({ syncTriggered: true });
+      await client.syncDatabase();
+      const scriptArg = mockRunJXAJson.mock.calls[0][0];
+      // Confirms we're using the JXA path (Application + synchronize)
+      // and NOT going through evaluateJavascript / OmniJS document.save.
+      expect(scriptArg).toContain('Application("OmniFocus")');
+      expect(scriptArg).toContain("synchronize");
+      expect(scriptArg).not.toContain("evaluateJavascript");
+    });
+
+    it("should NOT use the OmniJS executor", async () => {
+      mockRunJXAJson.mockResolvedValue({ syncTriggered: true });
+      await client.syncDatabase();
+      expect(mockRunOmniJSJson).not.toHaveBeenCalled();
     });
   });
 

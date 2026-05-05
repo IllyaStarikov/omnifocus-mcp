@@ -174,3 +174,17 @@ export function buildSaveDatabaseScript(): string {
   return JSON.stringify({ saved: true });
 })()`;
 }
+
+/**
+ * Returns a raw JXA script (NOT OmniJS) that triggers an OmniFocus sync.
+ * Must be executed via runJXA, not runOmniJS — `synchronize()` is an
+ * application-level Apple Events command that doesn't exist in the OmniJS
+ * sandbox. Sync runs asynchronously; this returns immediately.
+ */
+export function buildSyncDatabaseScript(): string {
+  return `(() => {
+  const app = Application("OmniFocus");
+  app.synchronize();
+  return JSON.stringify({ syncTriggered: true });
+})()`;
+}

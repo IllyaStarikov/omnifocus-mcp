@@ -17,20 +17,9 @@ const OMNIJS_PRELUDE = `function byId(collection, id) {
 /** Promise-based mutex: serializes osascript calls to avoid Apple Events races */
 let pending: Promise<unknown> = Promise.resolve();
 
-/**
- * Executes an OmniJS script inside OmniFocus via osascript JXA bridge.
- * Returns the raw stdout string.
- * Calls are serialized via a mutex to prevent concurrent Apple Events races.
- */
-export async function runOmniJS(omniScript: string): Promise<string> {
+async function runOsascript(jxaScript: string, kind: "OmniJS" | "JXA", scriptLength: number): Promise<string> {
   const execute = async (): Promise<string> => {
-    const fullScript = OMNIJS_PRELUDE + '\n' + omniScript;
-    const jxaScript = `(() => {
-  const app = Application("OmniFocus");
-  return app.evaluateJavascript(${JSON.stringify(fullScript)});
-})()`;
-
-    logger.debug("Executing OmniJS script", { scriptLength: omniScript.length });
+    logger.debug(`Executing ${kind} script`, { scriptLength });
 
     try {
       const { stdout } = await execFileAsync("osascript", ["-l", "JavaScript", "-e", jxaScript], {
@@ -44,14 +33,28 @@ export async function runOmniJS(omniScript: string): Promise<string> {
       const stderr = execError.stderr || "";
       const exitCode = execError.killed ? null : (execError.code ?? 1);
 
-      logger.error("OmniJS execution failed", { stderr, exitCode });
-      logger.debug("Failed script preview", { script: omniScript.substring(0, 500) });
+      logger.error(`${kind} execution failed`, { stderr, exitCode });
+      logger.debug("Failed script preview", { script: jxaScript.substring(0, 500) });
       throw parseExecutorError(stderr, exitCode);
     }
   };
 
   pending = pending.then(execute, execute);
   return pending as Promise<string>;
+}
+
+/**
+ * Executes an OmniJS script inside OmniFocus via osascript JXA bridge.
+ * Returns the raw stdout string.
+ * Calls are serialized via a mutex to prevent concurrent Apple Events races.
+ */
+export async function runOmniJS(omniScript: string): Promise<string> {
+  const fullScript = OMNIJS_PRELUDE + '\n' + omniScript;
+  const jxaScript = `(() => {
+  const app = Application("OmniFocus");
+  return app.evaluateJavascript(${JSON.stringify(fullScript)});
+})()`;
+  return runOsascript(jxaScript, "OmniJS", omniScript.length);
 }
 
 /**
@@ -65,6 +68,31 @@ export async function runOmniJSJson<T>(omniScript: string): Promise<T> {
   } catch (parseError) {
     const parseMessage = parseError instanceof Error ? parseError.message : String(parseError);
     logger.error("Failed to parse OmniJS JSON response", { raw: raw.substring(0, 500), parseError: parseMessage });
+    throw new Error(`Failed to parse OmniFocus response as JSON (${parseMessage}): ${raw.substring(0, 200)}`);
+  }
+}
+
+/**
+ * Executes a raw JXA script (NOT wrapped in evaluateJavascript). Use this for
+ * application-level commands that aren't exposed through OmniJS, like
+ * `Application("OmniFocus").synchronize()`. Shares the OmniJS mutex so
+ * concurrent Apple Events races are still avoided.
+ */
+export async function runJXA(jxaScript: string): Promise<string> {
+  return runOsascript(jxaScript, "JXA", jxaScript.length);
+}
+
+/**
+ * Executes a raw JXA script and parses the result as JSON.
+ */
+export async function runJXAJson<T>(jxaScript: string): Promise<T> {
+  const raw = await runJXA(jxaScript);
+
+  try {
+    return JSON.parse(raw) as T;
+  } catch (parseError) {
+    const parseMessage = parseError instanceof Error ? parseError.message : String(parseError);
+    logger.error("Failed to parse JXA JSON response", { raw: raw.substring(0, 500), parseError: parseMessage });
     throw new Error(`Failed to parse OmniFocus response as JSON (${parseMessage}): ${raw.substring(0, 200)}`);
   }
 }

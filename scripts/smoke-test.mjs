@@ -43,6 +43,23 @@ async function runOmniJSJson(omniScript) {
   return parsed;
 }
 
+async function runJXA(jxaScript) {
+  const { stdout } = await execFileAsync("osascript", ["-l", "JavaScript", "-e", jxaScript], {
+    timeout: 30000,
+    maxBuffer: 10 * 1024 * 1024,
+  });
+  return stdout.trim();
+}
+
+async function runJXAJson(jxaScript) {
+  const raw = await runJXA(jxaScript);
+  const parsed = JSON.parse(raw);
+  if (VERBOSE) {
+    console.log("    ↳ " + JSON.stringify(parsed, null, 2).split("\n").join("\n      "));
+  }
+  return parsed;
+}
+
 // ─── Import script builders ─────────────────────────────────────────────
 
 const tags = await import("../dist/omnifocus/scripts/tags.js");
@@ -273,6 +290,16 @@ await test("save_database: completes without error", async () => {
   const result = await runOmniJS(database.buildSaveDatabaseScript());
   // save_database returns nothing meaningful, just verify no error
   assert(true, "save completed");
+});
+
+await test("sync_database: triggers sync via JXA", async () => {
+  const script = database.buildSyncDatabaseScript();
+  // The sync script is JXA, NOT OmniJS — must be run via runJXA
+  assert(script.includes('Application("OmniFocus")'), "expected JXA Application call");
+  assert(script.includes("synchronize"), "expected synchronize() call");
+  assert(!script.includes("evaluateJavascript"), "sync script should not wrap OmniJS");
+  const result = await runJXAJson(script);
+  assert(result.syncTriggered === true, `expected syncTriggered:true, got ${JSON.stringify(result)}`);
 });
 
 await test("list_tasks: with taskStatus 'available'", async () => {

@@ -15,10 +15,13 @@ import { NotRunningError, ScriptError, TimeoutError } from "../../../src/utils/e
 vi.mock("../../../src/omnifocus/executor.js", () => ({
   runOmniJS: vi.fn(),
   runOmniJSJson: vi.fn(),
+  runJXA: vi.fn(),
+  runJXAJson: vi.fn(),
 }));
 
-import { runOmniJSJson } from "../../../src/omnifocus/executor.js";
+import { runOmniJSJson, runJXAJson } from "../../../src/omnifocus/executor.js";
 const mockRunOmniJSJson = vi.mocked(runOmniJSJson);
+const mockRunJXAJson = vi.mocked(runJXAJson);
 
 describe("Tool handler tests via MCP protocol", () => {
   let client: Client;
@@ -91,6 +94,22 @@ describe("Tool handler tests via MCP protocol", () => {
       const result = await client.callTool({ name: "save_database", arguments: {} });
       const parsed = parseResult(result);
       expect(parsed.saved).toBe(true);
+    });
+  });
+
+  describe("sync_database", () => {
+    it("should return syncTriggered status", async () => {
+      mockRunJXAJson.mockResolvedValue({ syncTriggered: true });
+      const result = await client.callTool({ name: "sync_database", arguments: {} });
+      const parsed = parseResult(result);
+      expect(parsed.syncTriggered).toBe(true);
+      expect(mockRunJXAJson).toHaveBeenCalledTimes(1);
+    });
+
+    it("should NOT route through OmniJS", async () => {
+      mockRunJXAJson.mockResolvedValue({ syncTriggered: true });
+      await client.callTool({ name: "sync_database", arguments: {} });
+      expect(mockRunOmniJSJson).not.toHaveBeenCalled();
     });
   });
 
@@ -655,6 +674,46 @@ describe("Tool handler tests via MCP protocol", () => {
       const scriptArg = mockRunOmniJSJson.mock.calls[0][0];
       expect(scriptArg).toContain("task-parent");
     });
+
+    it("should NOT trigger sync by default", async () => {
+      mockRunOmniJSJson.mockResolvedValue([mockTask]);
+      await client.callTool({
+        name: "batch_create_tasks",
+        arguments: { tasks: [{ name: "Task" }] },
+      });
+      expect(mockRunJXAJson).not.toHaveBeenCalled();
+    });
+
+    it("should trigger sync when sync:true", async () => {
+      mockRunOmniJSJson.mockResolvedValue([mockTask]);
+      mockRunJXAJson.mockResolvedValue({ syncTriggered: true });
+      await client.callTool({
+        name: "batch_create_tasks",
+        arguments: { tasks: [{ name: "Task" }], sync: true },
+      });
+      expect(mockRunJXAJson).toHaveBeenCalledTimes(1);
+    });
+
+    it("should NOT include sync flag in OmniJS script payload", async () => {
+      mockRunOmniJSJson.mockResolvedValue([mockTask]);
+      mockRunJXAJson.mockResolvedValue({ syncTriggered: true });
+      await client.callTool({
+        name: "batch_create_tasks",
+        arguments: { tasks: [{ name: "Task X" }], sync: true },
+      });
+      const scriptArg = mockRunOmniJSJson.mock.calls[0][0];
+      expect(scriptArg).not.toContain('"sync"');
+    });
+
+    it("should NOT sync when batch fails", async () => {
+      mockRunOmniJSJson.mockRejectedValue(new Error("OmniFocus exploded"));
+      const result = await client.callTool({
+        name: "batch_create_tasks",
+        arguments: { tasks: [{ name: "Task" }], sync: true },
+      });
+      expect(result.isError).toBe(true);
+      expect(mockRunJXAJson).not.toHaveBeenCalled();
+    });
   });
 
   describe("batch_delete_tasks", () => {
@@ -672,6 +731,25 @@ describe("Tool handler tests via MCP protocol", () => {
       expect(parsed).toHaveLength(2);
       expect(parsed[0].deleted).toBe(true);
     });
+
+    it("should trigger sync when sync:true", async () => {
+      mockRunOmniJSJson.mockResolvedValue([{ deleted: true, id: "task-1" }]);
+      mockRunJXAJson.mockResolvedValue({ syncTriggered: true });
+      await client.callTool({
+        name: "batch_delete_tasks",
+        arguments: { taskIds: ["task-1"], sync: true },
+      });
+      expect(mockRunJXAJson).toHaveBeenCalledTimes(1);
+    });
+
+    it("should NOT trigger sync by default", async () => {
+      mockRunOmniJSJson.mockResolvedValue([{ deleted: true, id: "task-1" }]);
+      await client.callTool({
+        name: "batch_delete_tasks",
+        arguments: { taskIds: ["task-1"] },
+      });
+      expect(mockRunJXAJson).not.toHaveBeenCalled();
+    });
   });
 
   describe("batch_complete_tasks", () => {
@@ -685,6 +763,25 @@ describe("Tool handler tests via MCP protocol", () => {
       expect(result.isError).toBeFalsy();
       const scriptArg = mockRunOmniJSJson.mock.calls[0][0];
       expect(scriptArg).toContain("markComplete");
+    });
+
+    it("should trigger sync when sync:true", async () => {
+      mockRunOmniJSJson.mockResolvedValue([mockCompletedTask]);
+      mockRunJXAJson.mockResolvedValue({ syncTriggered: true });
+      await client.callTool({
+        name: "batch_complete_tasks",
+        arguments: { taskIds: ["task-1"], sync: true },
+      });
+      expect(mockRunJXAJson).toHaveBeenCalledTimes(1);
+    });
+
+    it("should NOT trigger sync by default", async () => {
+      mockRunOmniJSJson.mockResolvedValue([mockCompletedTask]);
+      await client.callTool({
+        name: "batch_complete_tasks",
+        arguments: { taskIds: ["task-1"] },
+      });
+      expect(mockRunJXAJson).not.toHaveBeenCalled();
     });
   });
 
