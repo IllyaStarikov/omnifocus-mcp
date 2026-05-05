@@ -28,6 +28,14 @@ describe("database script builders", () => {
       expect(script).toContain("overdue");
     });
 
+    it("counts overdue and due-soon by Task.Status so tasks with inherited project due dates are included", () => {
+      const script = buildDatabaseSummaryScript();
+      expect(script).toContain("Task.Status.Overdue");
+      expect(script).toContain("Task.Status.DueSoon");
+      // Filtering Available-only first would miss Overdue/DueSoon (mutually exclusive statuses).
+      expect(script).not.toMatch(/available\.filter\([^)]*dueDate/);
+    });
+
     it("should count flagged tasks", () => {
       const script = buildDatabaseSummaryScript();
       expect(script).toContain("flagged");
@@ -87,6 +95,13 @@ describe("database script builders", () => {
       expect(script).toContain("summary");
       expect(script).toContain("inboxCount");
       expect(script).toContain("projectCount");
+    });
+
+    it("dump summary counts overdue and due-soon by Task.Status", () => {
+      const script = buildDumpDatabaseScript();
+      expect(script).toContain("Task.Status.Overdue");
+      expect(script).toContain("Task.Status.DueSoon");
+      expect(script).not.toMatch(/available\.filter\([^)]*dueDate/);
     });
 
     it("should pass hideRecurringDuplicates option", () => {

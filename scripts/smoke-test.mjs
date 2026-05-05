@@ -299,6 +299,39 @@ await test("list_tasks: with date filters (dueAfter/dueBefore)", async () => {
   assert(Array.isArray(result), `expected array, got ${typeof result}`);
 });
 
+await test("list_tasks: dueBefore surfaces task with inherited project due date", async () => {
+  // Set the project's due date to 2 days ago so its child task is effectively overdue.
+  const pastDue = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString();
+  await runOmniJSJson(projects.buildUpdateProjectScript({ id: ids.project, dueDate: pastDue }));
+
+  // Create a child task with NO own due date — it inherits the project's due date.
+  const childTask = await runOmniJSJson(tasks.buildCreateTaskScript({
+    name: "__MCPTEST__InheritedDueChild",
+    projectId: ids.project,
+  }));
+  ids.inheritedDueChild = childTask.id;
+  assert(childTask.dueDate === null, `child own dueDate should be null, got ${childTask.dueDate}`);
+  assert(childTask.effectiveDueDate !== null, `child effectiveDueDate should inherit, got null`);
+
+  // Filter dueBefore = tomorrow. The inherited-overdue child must appear.
+  const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+  const filtered = await runOmniJSJson(tasks.buildListTasksScript({ dueBefore: tomorrow, limit: 500 }));
+  const names = filtered.map(t => t.name);
+  assert(
+    names.includes("__MCPTEST__InheritedDueChild"),
+    `child with inherited overdue date should be in dueBefore results; MCPTEST matches: ${JSON.stringify(names.filter(n => n.includes("MCPTEST")))}`
+  );
+});
+
+await test("get_database_summary: overdueTaskCount counts tasks with inherited project due dates", async () => {
+  const summary = await runOmniJSJson(database.buildDatabaseSummaryScript());
+  assert(typeof summary.overdueTaskCount === "number", `overdueTaskCount must be number, got ${typeof summary.overdueTaskCount}`);
+  assert(
+    summary.overdueTaskCount > preSnapshot.overdueTaskCount,
+    `overdueTaskCount should have increased after adding inherited-overdue task; pre=${preSnapshot.overdueTaskCount}, now=${summary.overdueTaskCount}`
+  );
+});
+
 await test("list_tasks: with planned date filters (plannedAfter/plannedBefore)", async () => {
   const result = await runOmniJSJson(tasks.buildListTasksScript({
     plannedAfter: "2020-01-01T00:00:00Z",

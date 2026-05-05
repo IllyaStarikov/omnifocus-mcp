@@ -56,6 +56,17 @@ describe("task script builders", () => {
       expect(script).toContain("dueBefore");
     });
 
+    it("filters dueBefore/dueAfter by effectiveDueDate so inherited project due dates are included", () => {
+      const script = buildListTasksScript({
+        dueAfter: "2024-01-01T00:00:00Z",
+        dueBefore: "2024-12-31T23:59:59Z",
+      });
+      expect(script).toContain("t.effectiveDueDate < _dueAfter");
+      expect(script).toContain("t.effectiveDueDate > _dueBefore");
+      expect(script).not.toMatch(/t\.dueDate\s*<\s*_dueAfter/);
+      expect(script).not.toMatch(/t\.dueDate\s*>\s*_dueBefore/);
+    });
+
     it("should include defer date filters", () => {
       const script = buildListTasksScript({
         deferAfter: "2024-01-01T00:00:00Z",
@@ -660,6 +671,17 @@ describe("task script builders", () => {
       });
       expect(script).toContain("dueAfter");
       expect(script).toContain("dueBefore");
+    });
+
+    it("filters dueBefore/dueAfter by effectiveDueDate (shares filter template with list_tasks)", () => {
+      const script = buildGetTaskCountScript({
+        dueAfter: "2024-01-01T00:00:00Z",
+        dueBefore: "2024-12-31T23:59:59Z",
+      });
+      expect(script).toContain("t.effectiveDueDate < _dueAfter");
+      expect(script).toContain("t.effectiveDueDate > _dueBefore");
+      expect(script).not.toMatch(/t\.dueDate\s*<\s*_dueAfter/);
+      expect(script).not.toMatch(/t\.dueDate\s*>\s*_dueBefore/);
     });
 
     it("should apply planned date filters", () => {

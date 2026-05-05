@@ -8,13 +8,11 @@ export function buildDatabaseSummaryScript(): string {
   var tagsList = flattenedTags;
   var folders = flattenedFolders;
 
-  var now = new Date();
-  var soon = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000);
-
   var allTasks = flattenedTasks;
   var available = allTasks.filter(function(t) { return t.taskStatus === Task.Status.Available; });
-  var dueSoon = available.filter(function(t) { return t.dueDate && t.dueDate <= soon && t.dueDate >= now; });
-  var overdue = available.filter(function(t) { return t.dueDate && t.dueDate < now; });
+  // Task.Status is mutually exclusive: a past-due task's status is Overdue, not Available.
+  var dueSoon = allTasks.filter(function(t) { return t.taskStatus === Task.Status.DueSoon; });
+  var overdue = allTasks.filter(function(t) { return t.taskStatus === Task.Status.Overdue; });
   var flagged = available.filter(function(t) { return t.flagged; });
 
   return JSON.stringify({
@@ -127,12 +125,11 @@ export function buildDumpDatabaseScript(args: DumpDatabaseArgs = {}): string {
   var perspectivesSerialized = perspectives.map(serializePerspective);
 
   // Summary
-  var now = new Date();
-  var soon = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000);
   var allTasks = flattenedTasks;
   var available = allTasks.filter(function(t) { return t.taskStatus === Task.Status.Available; });
-  var dueSoon = available.filter(function(t) { return t.dueDate && t.dueDate <= soon && t.dueDate >= now; });
-  var overdue = available.filter(function(t) { return t.dueDate && t.dueDate < now; });
+  // Task.Status is mutually exclusive: a past-due task's status is Overdue, not Available.
+  var dueSoon = allTasks.filter(function(t) { return t.taskStatus === Task.Status.DueSoon; });
+  var overdue = allTasks.filter(function(t) { return t.taskStatus === Task.Status.Overdue; });
   var flagged = available.filter(function(t) { return t.flagged; });
 
   var summary = {

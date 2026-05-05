@@ -62,9 +62,9 @@ const taskFilterLogicFn = `
       }
     }
 
-    // Filter by due date range
-    if (_dueAfter && (!t.dueDate || t.dueDate < _dueAfter)) return false;
-    if (_dueBefore && (!t.dueDate || t.dueDate > _dueBefore)) return false;
+    // Match effectiveDueDate so tasks inheriting a project's due date are included.
+    if (_dueAfter && (!t.effectiveDueDate || t.effectiveDueDate < _dueAfter)) return false;
+    if (_dueBefore && (!t.effectiveDueDate || t.effectiveDueDate > _dueBefore)) return false;
 
     // Filter by defer date range
     if (_deferAfter && (!t.deferDate || t.deferDate < _deferAfter)) return false;
