@@ -18,16 +18,34 @@ describe("serializer templates", () => {
     it("should contain all required task field names", () => {
       const fields = [
         "id", "name", "note", "url", "flagged", "completed", "dropped",
+        "taskStatus",
         "deferDate", "dueDate", "plannedDate", "completionDate", "droppedDate",
         "added", "modified", "effectiveDueDate", "effectiveDeferDate",
         "effectivePlannedDate",
-        "effectiveFlagged", "estimatedMinutes", "containingProjectId",
+        "effectiveFlagged", "effectivelyCompleted", "effectivelyDropped",
+        "estimatedMinutes", "containingProjectId",
         "containingProjectName", "parentTaskId", "tags", "hasChildren",
         "sequential", "completedByChildren", "inInbox", "repetitionRule",
       ];
       for (const field of fields) {
         expect(serializeTaskFn).toContain(field);
       }
+    });
+
+    it("emits taskStatus via _taskStatusMap so callers can distinguish Available/Blocked/Next/DueSoon/Overdue", () => {
+      expect(serializeTaskFn).toContain("_taskStatusMap[Task.Status.Available] = \"available\"");
+      expect(serializeTaskFn).toContain("_taskStatusMap[Task.Status.Blocked] = \"blocked\"");
+      expect(serializeTaskFn).toContain("_taskStatusMap[Task.Status.Completed] = \"completed\"");
+      expect(serializeTaskFn).toContain("_taskStatusMap[Task.Status.Dropped] = \"dropped\"");
+      expect(serializeTaskFn).toContain("_taskStatusMap[Task.Status.Next] = \"next\"");
+      expect(serializeTaskFn).toContain("_taskStatusMap[Task.Status.DueSoon] = \"dueSoon\"");
+      expect(serializeTaskFn).toContain("_taskStatusMap[Task.Status.Overdue] = \"overdue\"");
+      expect(serializeTaskFn).toMatch(/taskStatus:\s*_taskStatusMap\[task\.taskStatus\]/);
+    });
+
+    it("emits effectivelyCompleted/effectivelyDropped from the inheriting OmniJS properties", () => {
+      expect(serializeTaskFn).toMatch(/effectivelyCompleted:\s*task\.effectivelyCompleted/);
+      expect(serializeTaskFn).toMatch(/effectivelyDropped:\s*task\.effectivelyDropped/);
     });
 
     it("should use Task.RepetitionMethod enums", () => {

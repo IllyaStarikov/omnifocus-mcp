@@ -1134,15 +1134,13 @@ describe("Tool handler tests via MCP protocol", () => {
       expect(parsed[0].name).toBe("Due Soon");
     });
 
-    it("should filter with includeBuiltIn=false", async () => {
-      mockRunOmniJSJson.mockResolvedValue([]);
-      await client.callTool({
-        name: "list_perspectives",
-        arguments: { includeBuiltIn: false },
-      });
-
-      const scriptArg = mockRunOmniJSJson.mock.calls[0][0];
-      expect(scriptArg).toContain("builtInNames");
+    it("does not accept legacy includeBuiltIn/includeCustom args", async () => {
+      const tools = await client.listTools();
+      const listPerspectives = tools.tools.find((t) => t.name === "list_perspectives");
+      expect(listPerspectives).toBeDefined();
+      const props = (listPerspectives!.inputSchema as { properties?: Record<string, unknown> }).properties ?? {};
+      expect(Object.keys(props)).not.toContain("includeBuiltIn");
+      expect(Object.keys(props)).not.toContain("includeCustom");
     });
   });
 

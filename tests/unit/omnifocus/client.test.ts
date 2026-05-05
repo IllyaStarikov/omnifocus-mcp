@@ -467,10 +467,10 @@ describe("OmniFocusClient", () => {
   });
 
   describe("listPerspectives caching", () => {
-    it("should cache results for same args", async () => {
+    it("should cache results", async () => {
       mockRunOmniJSJson.mockResolvedValue(mockPerspectiveList);
-      await client.listPerspectives({ includeBuiltIn: true });
-      await client.listPerspectives({ includeBuiltIn: true });
+      await client.listPerspectives();
+      await client.listPerspectives();
       expect(mockRunOmniJSJson).toHaveBeenCalledTimes(1);
     });
   });

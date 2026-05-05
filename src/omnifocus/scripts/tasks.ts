@@ -37,9 +37,9 @@ const taskFilterLogicFn = `
       if (t.taskStatus === Task.Status.Completed || t.taskStatus === Task.Status.Dropped) return false;
     }
 
-    // Filter by flagged
-    if (args.flagged === true && !t.flagged) return false;
-    if (args.flagged === false && t.flagged) return false;
+    // Match effectiveFlagged so children of a flagged project surface (mirrors OmniFocus's Flagged perspective).
+    if (args.flagged === true && !t.effectiveFlagged) return false;
+    if (args.flagged === false && t.effectiveFlagged) return false;
 
     // Filter by available
     if (args.available === true && t.taskStatus !== Task.Status.Available) return false;
@@ -66,13 +66,13 @@ const taskFilterLogicFn = `
     if (_dueAfter && (!t.effectiveDueDate || t.effectiveDueDate < _dueAfter)) return false;
     if (_dueBefore && (!t.effectiveDueDate || t.effectiveDueDate > _dueBefore)) return false;
 
-    // Filter by defer date range
-    if (_deferAfter && (!t.deferDate || t.deferDate < _deferAfter)) return false;
-    if (_deferBefore && (!t.deferDate || t.deferDate > _deferBefore)) return false;
+    // Match effectiveDeferDate so tasks inheriting a project's defer date are included.
+    if (_deferAfter && (!t.effectiveDeferDate || t.effectiveDeferDate < _deferAfter)) return false;
+    if (_deferBefore && (!t.effectiveDeferDate || t.effectiveDeferDate > _deferBefore)) return false;
 
-    // Filter by planned date range
-    if (_plannedAfter && (!t.plannedDate || t.plannedDate < _plannedAfter)) return false;
-    if (_plannedBefore && (!t.plannedDate || t.plannedDate > _plannedBefore)) return false;
+    // Match effectivePlannedDate so tasks inheriting a project's planned date are included.
+    if (_plannedAfter && (!t.effectivePlannedDate || t.effectivePlannedDate < _plannedAfter)) return false;
+    if (_plannedBefore && (!t.effectivePlannedDate || t.effectivePlannedDate > _plannedBefore)) return false;
 
     // Filter by search query
     if (_searchQuery) {

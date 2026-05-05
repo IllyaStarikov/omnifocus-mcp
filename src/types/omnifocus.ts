@@ -1,5 +1,15 @@
 // ─── Serialized JSON types returned from OmniJS scripts ─────────────
 
+export type TaskStatus =
+  | "available"
+  | "blocked"
+  | "completed"
+  | "dropped"
+  | "next"
+  | "dueSoon"
+  | "overdue"
+  | "unknown";
+
 export interface TaskJSON {
   id: string;
   name: string;
@@ -8,6 +18,7 @@ export interface TaskJSON {
   flagged: boolean;
   completed: boolean;
   dropped: boolean;
+  taskStatus: TaskStatus;
   deferDate: string | null;
   dueDate: string | null;
   completionDate: string | null;
@@ -19,6 +30,8 @@ export interface TaskJSON {
   plannedDate: string | null;
   effectivePlannedDate: string | null;
   effectiveFlagged: boolean;
+  effectivelyCompleted: boolean;
+  effectivelyDropped: boolean;
   estimatedMinutes: number | null;
   containingProjectId: string | null;
   containingProjectName: string | null;
@@ -321,11 +334,6 @@ export interface BatchDeleteTasksArgs {
 
 export interface BatchCompleteTasksArgs {
   taskIds: string[];
-}
-
-export interface ListPerspectivesArgs {
-  includeBuiltIn?: boolean;
-  includeCustom?: boolean;
 }
 
 export interface DumpDatabaseArgs {

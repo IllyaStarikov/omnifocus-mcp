@@ -37,9 +37,15 @@ describe("task script builders", () => {
       expect(script).toContain("source = inbox");
     });
 
-    it("should include flagged filter", () => {
+    it("filters flagged by effectiveFlagged so children of a flagged project surface", () => {
       const script = buildListTasksScript({ flagged: true });
-      expect(script).toContain("flagged");
+      expect(script).toContain("!t.effectiveFlagged");
+      expect(script).not.toMatch(/!t\.flagged\b/);
+    });
+
+    it("inverse flagged filter also keys off effectiveFlagged", () => {
+      const script = buildListTasksScript({ flagged: false });
+      expect(script).toContain("t.effectiveFlagged");
     });
 
     it("should include tag filter", () => {
@@ -67,22 +73,26 @@ describe("task script builders", () => {
       expect(script).not.toMatch(/t\.dueDate\s*>\s*_dueBefore/);
     });
 
-    it("should include defer date filters", () => {
+    it("filters deferBefore/deferAfter by effectiveDeferDate so inherited project defer dates are included", () => {
       const script = buildListTasksScript({
         deferAfter: "2024-01-01T00:00:00Z",
         deferBefore: "2024-06-01T00:00:00Z",
       });
-      expect(script).toContain("deferAfter");
-      expect(script).toContain("deferBefore");
+      expect(script).toContain("t.effectiveDeferDate < _deferAfter");
+      expect(script).toContain("t.effectiveDeferDate > _deferBefore");
+      expect(script).not.toMatch(/t\.deferDate\s*<\s*_deferAfter/);
+      expect(script).not.toMatch(/t\.deferDate\s*>\s*_deferBefore/);
     });
 
-    it("should include planned date filters", () => {
+    it("filters plannedBefore/plannedAfter by effectivePlannedDate so inherited project planned dates are included", () => {
       const script = buildListTasksScript({
         plannedAfter: "2024-01-01T00:00:00Z",
         plannedBefore: "2024-06-01T00:00:00Z",
       });
-      expect(script).toContain("plannedAfter");
-      expect(script).toContain("plannedBefore");
+      expect(script).toContain("t.effectivePlannedDate < _plannedAfter");
+      expect(script).toContain("t.effectivePlannedDate > _plannedBefore");
+      expect(script).not.toMatch(/t\.plannedDate\s*<\s*_plannedAfter/);
+      expect(script).not.toMatch(/t\.plannedDate\s*>\s*_plannedBefore/);
     });
 
     it("should include search filter", () => {
@@ -101,24 +111,29 @@ describe("task script builders", () => {
       expect(script).toContain("10");
     });
 
-    it("should include taskStatus filter", () => {
+    it("taskStatus 'available' pins to Task.Status.Available", () => {
       const script = buildListTasksScript({ taskStatus: "available" });
-      expect(script).toContain("available");
+      expect(script).toContain("Task.Status.Available");
+      expect(script).toContain('args.taskStatus === "available"');
     });
 
-    it("should handle taskStatus 'remaining'", () => {
+    it("taskStatus 'remaining' is the union of Available and Blocked", () => {
       const script = buildListTasksScript({ taskStatus: "remaining" });
-      expect(script).toContain("remaining");
+      expect(script).toContain("Task.Status.Available");
+      expect(script).toContain("Task.Status.Blocked");
+      expect(script).toContain('args.taskStatus === "remaining"');
     });
 
-    it("should handle taskStatus 'completed'", () => {
+    it("taskStatus 'completed' pins to Task.Status.Completed", () => {
       const script = buildListTasksScript({ taskStatus: "completed" });
-      expect(script).toContain("completed");
+      expect(script).toContain("Task.Status.Completed");
+      expect(script).toContain('args.taskStatus === "completed"');
     });
 
-    it("should handle taskStatus 'dropped'", () => {
+    it("taskStatus 'dropped' pins to Task.Status.Dropped", () => {
       const script = buildListTasksScript({ taskStatus: "dropped" });
-      expect(script).toContain("dropped");
+      expect(script).toContain("Task.Status.Dropped");
+      expect(script).toContain('args.taskStatus === "dropped"');
     });
 
     it("should combine multiple filters", () => {

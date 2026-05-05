@@ -6,14 +6,11 @@ import { formatMcpError } from "../utils/errors.js";
 export function registerPerspectiveTools(server: McpServer, client: OmniFocusClient): void {
   server.tool(
     "list_perspectives",
-    "List perspectives in OmniFocus. Only custom perspectives are available; built-in perspectives (Inbox, Projects, Tags, Forecast, Flagged, Review, Nearby) cannot be accessed via the API. Use dedicated tools instead (e.g. get_inbox_tasks, get_flagged_tasks, get_review_queue, list_projects, list_tags, or list_tasks with date filters for Forecast).",
-    {
-      includeBuiltIn: z.boolean().optional().describe("Include custom perspectives whose names match built-in perspective names (default true). Note: actual built-in perspectives are not available via the API."),
-      includeCustom: z.boolean().optional().describe("Include custom perspectives (default true)"),
-    },
-    async (args) => {
+    "List custom perspectives in OmniFocus. Built-in perspectives (Inbox, Projects, Tags, Forecast, Flagged, Review, Nearby) are not enumerable via the API — use dedicated tools instead (get_inbox_tasks, get_flagged_tasks, get_review_queue, list_projects, list_tags, or list_tasks with date filters for Forecast).",
+    {},
+    async () => {
       try {
-        const perspectives = await client.listPerspectives(args);
+        const perspectives = await client.listPerspectives();
         return { content: [{ type: "text" as const, text: JSON.stringify(perspectives, null, 2) }] };
       } catch (error) {
         const { message } = formatMcpError(error);

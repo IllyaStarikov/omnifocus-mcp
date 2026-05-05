@@ -6,28 +6,18 @@ import {
 
 describe("perspective script builders", () => {
   describe("buildListPerspectivesScript", () => {
-    it("should generate valid list script", () => {
+    it("returns custom perspectives via Perspective.Custom.all", () => {
       const script = buildListPerspectivesScript();
-      expect(script).toContain("perspectives");
+      expect(script).toContain("Perspective.Custom.all");
       expect(script).toContain("serializePerspective");
       expect(script).toContain("JSON.stringify");
     });
 
-    it("should include built-in filter when includeBuiltIn is false", () => {
-      const script = buildListPerspectivesScript({ includeBuiltIn: false });
-      expect(script).toContain("builtInNames");
-      expect(script).toContain("Inbox");
-      expect(script).toContain("Forecast");
-    });
-
-    it("should include custom filter when includeCustom is false", () => {
-      const script = buildListPerspectivesScript({ includeCustom: false });
-      expect(script).toContain("builtInNames");
-    });
-
-    it("should pass no filters by default", () => {
-      const script = buildListPerspectivesScript({});
-      expect(script).toContain("builtInNames");
+    it("does not attempt to filter against the built-in perspective name allowlist", () => {
+      const script = buildListPerspectivesScript();
+      expect(script).not.toContain("builtInNames");
+      expect(script).not.toContain("includeBuiltIn");
+      expect(script).not.toContain("includeCustom");
     });
   });
 

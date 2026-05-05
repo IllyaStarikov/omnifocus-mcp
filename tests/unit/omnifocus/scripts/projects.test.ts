@@ -208,11 +208,14 @@ describe("project script builders", () => {
   });
 
   describe("buildGetReviewQueueScript", () => {
-    it("should find active projects with past review dates", () => {
+    it("includes both Active and OnHold projects with past review dates so OnHold projects appear in review", () => {
       const script = buildGetReviewQueueScript();
       expect(script).toContain("Project.Status.Active");
+      expect(script).toContain("Project.Status.OnHold");
       expect(script).toContain("nextReviewDate");
       expect(script).toContain("serializeProject");
+      // The filter must allow either status; pinning the disjunction protects against accidental Active-only narrowing.
+      expect(script).toMatch(/Project\.Status\.Active\s*\|\|\s*p\.status\s*===\s*Project\.Status\.OnHold/);
     });
   });
 

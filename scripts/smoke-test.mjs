@@ -221,14 +221,14 @@ await test("get_task_count: returns count > 0", async () => {
 });
 
 await test("list_perspectives: returns non-empty array of custom perspectives", async () => {
-  const result = await runOmniJSJson(perspectives.buildListPerspectivesScript({}));
+  const result = await runOmniJSJson(perspectives.buildListPerspectivesScript());
   assert(Array.isArray(result), `expected array, got ${typeof result}`);
   assert(result.length > 0, `expected non-empty array`);
   assert(result[0].name, `expected perspective to have name`);
 });
 
 await test("get_perspective_tasks: works with first custom perspective", async () => {
-  const allPersp = await runOmniJSJson(perspectives.buildListPerspectivesScript({}));
+  const allPersp = await runOmniJSJson(perspectives.buildListPerspectivesScript());
   assert(allPersp.length > 0, `no custom perspectives found`);
   try {
     const result = await runOmniJSJson(perspectives.buildGetPerspectiveTasksScript(allPersp[0].name));
@@ -332,18 +332,230 @@ await test("get_database_summary: overdueTaskCount counts tasks with inherited p
   );
 });
 
-await test("list_tasks: with planned date filters (plannedAfter/plannedBefore)", async () => {
-  const result = await runOmniJSJson(tasks.buildListTasksScript({
-    plannedAfter: "2020-01-01T00:00:00Z",
-    plannedBefore: "2030-12-31T23:59:59Z",
-    limit: 5,
+await test("list_tasks: deferBefore surfaces task with inherited project defer date", async () => {
+  // Set project deferDate to 30 days ago. A child created without its own deferDate inherits this.
+  const pastDefer = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+  await runOmniJSJson(projects.buildUpdateProjectScript({ id: ids.project, deferDate: pastDefer }));
+
+  const child = await runOmniJSJson(tasks.buildCreateTaskScript({
+    name: "__MCPTEST__InheritedDeferChild",
+    projectId: ids.project,
   }));
-  assert(Array.isArray(result), `expected array, got ${typeof result}`);
+  ids.inheritedDeferChild = child.id;
+  assert(child.deferDate === null, `child own deferDate should be null, got ${child.deferDate}`);
+  assert(child.effectiveDeferDate !== null, `child effectiveDeferDate should inherit, got null`);
+
+  // Scope by projectId so pagination doesn't drop the test child behind unrelated deferred tasks
+  // (large databases can have hundreds of tasks with effectiveDeferDate set).
+  const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+  const filtered = await runOmniJSJson(tasks.buildListTasksScript({
+    projectId: ids.project,
+    deferBefore: tomorrow,
+    limit: 500,
+  }));
+  const names = filtered.map(t => t.name);
+  assert(
+    names.includes("__MCPTEST__InheritedDeferChild"),
+    `child with inherited past defer date should appear in deferBefore results; MCPTEST matches: ${JSON.stringify(names.filter(n => n.includes("MCPTEST")))}`
+  );
 });
 
-await test("list_tasks: with projectId filter", async () => {
-  const result = await runOmniJSJson(tasks.buildListTasksScript({ projectId: ids.project, limit: 10 }));
+await test("list_tasks: plannedBefore surfaces task with inherited project planned date", async () => {
+  // Set project plannedDate to 5 days ago. A child without its own plannedDate inherits this.
+  const pastPlanned = new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString();
+  await runOmniJSJson(projects.buildUpdateProjectScript({ id: ids.project, plannedDate: pastPlanned }));
+
+  const child = await runOmniJSJson(tasks.buildCreateTaskScript({
+    name: "__MCPTEST__InheritedPlannedChild",
+    projectId: ids.project,
+  }));
+  ids.inheritedPlannedChild = child.id;
+  assert(child.plannedDate === null, `child own plannedDate should be null, got ${child.plannedDate}`);
+  assert(child.effectivePlannedDate !== null, `child effectivePlannedDate should inherit, got null`);
+
+  const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+  const filtered = await runOmniJSJson(tasks.buildListTasksScript({
+    projectId: ids.project,
+    plannedBefore: tomorrow,
+    limit: 500,
+  }));
+  const names = filtered.map(t => t.name);
+  assert(
+    names.includes("__MCPTEST__InheritedPlannedChild"),
+    `child with inherited past planned date should appear in plannedBefore results; MCPTEST matches: ${JSON.stringify(names.filter(n => n.includes("MCPTEST")))}`
+  );
+});
+
+await test("list_tasks: flagged:true surfaces tasks whose parent project is flagged (effectiveFlagged)", async () => {
+  // Flag the project; a freshly-created unflagged child inherits via effectiveFlagged.
+  await runOmniJSJson(projects.buildUpdateProjectScript({ id: ids.project, flagged: true }));
+
+  const child = await runOmniJSJson(tasks.buildCreateTaskScript({
+    name: "__MCPTEST__InheritedFlaggedChild",
+    projectId: ids.project,
+    flagged: false,
+  }));
+  ids.inheritedFlaggedChild = child.id;
+  assert(child.flagged === false, `child own flagged should be false, got ${child.flagged}`);
+  assert(child.effectiveFlagged === true, `child effectiveFlagged should be true, got ${child.effectiveFlagged}`);
+
+  // Scope by projectId — flagged:true alone returns hundreds of tasks on real databases.
+  const filtered = await runOmniJSJson(tasks.buildListTasksScript({
+    projectId: ids.project,
+    flagged: true,
+    limit: 500,
+  }));
+  const names = filtered.map(t => t.name);
+  assert(
+    names.includes("__MCPTEST__InheritedFlaggedChild"),
+    `child of flagged project should appear in flagged:true filter; MCPTEST matches: ${JSON.stringify(names.filter(n => n.includes("MCPTEST")))}`
+  );
+
+  // Unflag the project for downstream tests.
+  await runOmniJSJson(projects.buildUpdateProjectScript({ id: ids.project, flagged: false }));
+});
+
+await test("get_task: returns taskStatus enum string", async () => {
+  const t = await runOmniJSJson(tasks.buildGetTaskScript(ids.inheritedDueChild));
+  assert(typeof t.taskStatus === "string", `taskStatus should be string, got ${typeof t.taskStatus}`);
+  assert(
+    ["available","blocked","completed","dropped","next","dueSoon","overdue","unknown"].includes(t.taskStatus),
+    `taskStatus value unexpected: ${t.taskStatus}`
+  );
+});
+
+await test("list_tasks: tagNames filter returns only tasks carrying the named tag", async () => {
+  // Tagged task lives in the project. Untagged task lives in inbox — putting it inside the project
+  // would auto-apply the project's tags to t.tags, so "untagged" wouldn't actually be untagged.
+  const tagged = await runOmniJSJson(tasks.buildCreateTaskScript({
+    name: "__MCPTEST__TaggedForFilter",
+    projectId: ids.project,
+    tags: ["__MCPTEST__TagB"],
+  }));
+  const untagged = await runOmniJSJson(tasks.buildCreateTaskScript({
+    name: "__MCPTEST__UntaggedForFilter",
+  }));
+  ids.tagFilterTagged = tagged.id;
+  ids.tagFilterUntagged = untagged.id;
+
+  const filtered = await runOmniJSJson(tasks.buildListTasksScript({ tagNames: ["__MCPTEST__TagB"], limit: 500 }));
+  const names = filtered.map(t => t.name);
+  assert(names.includes("__MCPTEST__TaggedForFilter"), `tagged task missing from tagNames filter`);
+  assert(!names.includes("__MCPTEST__UntaggedForFilter"), `untagged task incorrectly included in tagNames filter`);
+});
+
+await test("list_tasks: taskStatus 'available' filter returns only Available-status tasks", async () => {
+  const result = await runOmniJSJson(tasks.buildListTasksScript({ taskStatus: "available", limit: 500 }));
+  assert(Array.isArray(result), `expected array`);
+  for (const t of result) {
+    assert(t.taskStatus === "available", `non-available task '${t.name}' returned by taskStatus:'available' filter (got ${t.taskStatus})`);
+  }
+});
+
+await test("list_tasks: taskStatus 'completed' filter returns only Completed-status tasks", async () => {
+  const task = await runOmniJSJson(tasks.buildCreateTaskScript({
+    name: "__MCPTEST__CompletedFilterCheck",
+    projectId: ids.project,
+  }));
+  ids.completedFilterCheck = task.id;
+  await runOmniJSJson(tasks.buildCompleteTaskScript(task.id));
+
+  // Scope by projectId — large databases can have hundreds of completed tasks past the page limit.
+  const result = await runOmniJSJson(tasks.buildListTasksScript({
+    projectId: ids.project,
+    taskStatus: "completed",
+    limit: 500,
+  }));
+  const names = result.map(t => t.name);
+  assert(names.includes("__MCPTEST__CompletedFilterCheck"), `completed task missing from taskStatus:'completed' filter`);
+  for (const t of result) {
+    assert(t.taskStatus === "completed", `non-completed task '${t.name}' returned by completed filter (got ${t.taskStatus})`);
+  }
+});
+
+await test("list_tasks: taskStatus 'dropped' filter returns only Dropped-status tasks", async () => {
+  const task = await runOmniJSJson(tasks.buildCreateTaskScript({
+    name: "__MCPTEST__DroppedFilterCheck",
+    projectId: ids.project,
+  }));
+  ids.droppedFilterCheck = task.id;
+  await runOmniJSJson(tasks.buildDropTaskScript(task.id));
+
+  const result = await runOmniJSJson(tasks.buildListTasksScript({
+    projectId: ids.project,
+    taskStatus: "dropped",
+    limit: 500,
+  }));
+  const names = result.map(t => t.name);
+  assert(names.includes("__MCPTEST__DroppedFilterCheck"), `dropped task missing from taskStatus:'dropped' filter`);
+  for (const t of result) {
+    assert(t.taskStatus === "dropped", `non-dropped task '${t.name}' returned by dropped filter (got ${t.taskStatus})`);
+  }
+});
+
+await test("list_tasks: available:true filter returns only Available-status tasks", async () => {
+  const result = await runOmniJSJson(tasks.buildListTasksScript({ available: true, limit: 500 }));
+  for (const t of result) {
+    assert(t.taskStatus === "available", `non-available task '${t.name}' returned by available:true filter (got ${t.taskStatus})`);
+  }
+});
+
+await test("get_database_summary: flaggedTaskCount increments after creating a flagged inbox task", async () => {
+  const pre = await runOmniJSJson(database.buildDatabaseSummaryScript());
+  // Use inbox so the task isn't subject to a parent project's defer/due that would push it out of Available.
+  const t = await runOmniJSJson(tasks.buildCreateTaskScript({
+    name: "__MCPTEST__FlaggedCountCheck",
+    flagged: true,
+  }));
+  ids.flaggedCountCheck = t.id;
+  const post = await runOmniJSJson(database.buildDatabaseSummaryScript());
+  assert(
+    post.flaggedTaskCount > pre.flaggedTaskCount,
+    `flaggedTaskCount should increase after adding flagged inbox task; pre=${pre.flaggedTaskCount}, post=${post.flaggedTaskCount}`
+  );
+});
+
+await test("get_database_summary: inboxCount increments after creating an inbox task", async () => {
+  const pre = await runOmniJSJson(database.buildDatabaseSummaryScript());
+  const t = await runOmniJSJson(tasks.buildCreateTaskScript({
+    name: "__MCPTEST__InboxCountCheck",
+  }));
+  ids.inboxCountCheck = t.id;
+  const post = await runOmniJSJson(database.buildDatabaseSummaryScript());
+  assert(
+    post.inboxCount > pre.inboxCount,
+    `inboxCount should increase after adding inbox task; pre=${pre.inboxCount}, post=${post.inboxCount}`
+  );
+});
+
+await test("update_project + get_project: status onHold round-trips", async () => {
+  await runOmniJSJson(projects.buildUpdateProjectScript({ id: ids.sal, status: "onHold" }));
+  const got = await runOmniJSJson(projects.buildGetProjectScript(ids.sal));
+  assert(got.status === "onHold", `expected status 'onHold', got '${got.status}'`);
+  // Restore so downstream tests in Phase 4 see Active state.
+  await runOmniJSJson(projects.buildUpdateProjectScript({ id: ids.sal, status: "active" }));
+});
+
+await test("get_review_queue: returns only Active or OnHold projects (never Done/Dropped)", async () => {
+  const queue = await runOmniJSJson(projects.buildGetReviewQueueScript());
+  assert(Array.isArray(queue), `expected array, got ${typeof queue}`);
+  for (const p of queue) {
+    assert(
+      p.status === "active" || p.status === "onHold",
+      `unexpected status '${p.status}' for project '${p.name}' in review queue`
+    );
+  }
+});
+
+await test("list_tasks: projectId filter returns only tasks in the project", async () => {
+  const result = await runOmniJSJson(tasks.buildListTasksScript({ projectId: ids.project, limit: 500 }));
   assert(Array.isArray(result), `expected array, got ${typeof result}`);
+  for (const t of result) {
+    assert(
+      t.containingProjectId === ids.project,
+      `task '${t.name}' has containingProjectId=${t.containingProjectId} but filter was projectId=${ids.project}`
+    );
+  }
 });
 
 await test("get_task_count: with flagged filter", async () => {
@@ -457,7 +669,13 @@ await test("get_inbox_tasks: verify InboxTask appears", async () => {
 });
 
 await test("get_flagged_tasks: verify Task1 appears (flagged)", async () => {
-  const result = await runOmniJSJson(tasks.buildListTasksScript({ flagged: true }));
+  // Scope by projectId — flagged:true returns hundreds of tasks on real databases since
+  // the filter keys off effectiveFlagged (children of flagged ancestors surface).
+  const result = await runOmniJSJson(tasks.buildListTasksScript({
+    projectId: ids.project,
+    flagged: true,
+    limit: 500,
+  }));
   const names = result.map(t => t.name);
   assert(names.includes("__MCPTEST__Task1"), `missing flagged Task1: ${JSON.stringify(names.filter(n => n.includes("MCPTEST")))}`);
 });

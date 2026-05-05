@@ -11,6 +11,15 @@ _taskMethodMap[Task.RepetitionMethod.Fixed] = "fixed";
 _taskMethodMap[Task.RepetitionMethod.StartAfterCompletion] = "startAfterCompletion";
 _taskMethodMap[Task.RepetitionMethod.DueAfterCompletion] = "dueAfterCompletion";
 
+var _taskStatusMap = {};
+_taskStatusMap[Task.Status.Available] = "available";
+_taskStatusMap[Task.Status.Blocked] = "blocked";
+_taskStatusMap[Task.Status.Completed] = "completed";
+_taskStatusMap[Task.Status.Dropped] = "dropped";
+_taskStatusMap[Task.Status.Next] = "next";
+_taskStatusMap[Task.Status.DueSoon] = "dueSoon";
+_taskStatusMap[Task.Status.Overdue] = "overdue";
+
 function serializeTask(task) {
   var rr = null;
   if (task.repetitionRule) {
@@ -28,6 +37,7 @@ function serializeTask(task) {
     flagged: task.flagged,
     completed: task.taskStatus === Task.Status.Completed,
     dropped: task.taskStatus === Task.Status.Dropped,
+    taskStatus: _taskStatusMap[task.taskStatus] || "unknown",
     deferDate: task.deferDate ? task.deferDate.toISOString() : null,
     dueDate: task.dueDate ? task.dueDate.toISOString() : null,
     plannedDate: task.plannedDate ? task.plannedDate.toISOString() : null,
@@ -39,6 +49,8 @@ function serializeTask(task) {
     effectiveDeferDate: task.effectiveDeferDate ? task.effectiveDeferDate.toISOString() : null,
     effectivePlannedDate: task.effectivePlannedDate ? task.effectivePlannedDate.toISOString() : null,
     effectiveFlagged: task.effectiveFlagged,
+    effectivelyCompleted: task.effectivelyCompleted,
+    effectivelyDropped: task.effectivelyDropped,
     estimatedMinutes: task.estimatedMinutes,
     containingProjectId: cp ? cp.id.primaryKey : null,
     containingProjectName: cp ? cp.name : null,
