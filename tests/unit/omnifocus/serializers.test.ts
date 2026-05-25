@@ -118,7 +118,7 @@ describe("serializer templates", () => {
   describe("serializeProjectFn", () => {
     it("should contain all required project field names", () => {
       const fields = [
-        "id", "name", "note", "url", "status", "flagged", "completed",
+        "id", "name", "note", "url", "status", "effectiveStatus", "effectivelyDropped", "flagged", "completed",
         "deferDate", "dueDate", "plannedDate", "completionDate", "droppedDate",
         "added", "modified", "estimatedMinutes", "containingFolderId",
         "containingFolderName", "tags", "sequential", "singleActionList",
@@ -140,6 +140,12 @@ describe("serializer templates", () => {
     it("should use _projectStatusMap", () => {
       expect(serializeProjectFn).toContain("_projectStatusMap");
       expect(serializeProjectFn).toContain('_projectStatusMap[project.status] || "active"');
+    });
+
+    it("should expose effective dropped status inherited from parent folders", () => {
+      expect(serializeProjectFn).toContain("folderIsEffectivelyDropped");
+      expect(serializeProjectFn).toContain("projectIsEffectivelyDropped");
+      expect(serializeProjectFn).toContain("projectEffectiveStatus");
     });
 
     it("should handle review interval", () => {

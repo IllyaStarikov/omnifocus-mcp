@@ -23,6 +23,12 @@ describe("database script builders", () => {
       expect(script).toContain("Task.Status.Available");
     });
 
+    it("excludes projects and tasks hidden by dropped parent folders from active summary counts", () => {
+      const script = buildDatabaseSummaryScript();
+      expect(script).toContain("!projectIsEffectivelyDropped(p)");
+      expect(script).toContain("!taskIsEffectivelyDropped(t)");
+    });
+
     it("should count due soon and overdue tasks", () => {
       const script = buildDatabaseSummaryScript();
       expect(script).toContain("dueSoon");
@@ -106,6 +112,12 @@ describe("database script builders", () => {
       expect(script).toContain("summary");
       expect(script).toContain("inboxCount");
       expect(script).toContain("projectCount");
+    });
+
+    it("excludes effectively dropped projects and tasks from dump when completed items are hidden", () => {
+      const script = buildDumpDatabaseScript();
+      expect(script).toContain("!projectIsEffectivelyDropped(p)");
+      expect(script).toContain("!taskIsEffectivelyDropped(t)");
     });
 
     it("dump summary counts overdue and due-soon by Task.Status", () => {

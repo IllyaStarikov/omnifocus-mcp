@@ -1,14 +1,16 @@
-import { serializeTaskFn, serializeTaskWithChildrenFn, serializeProjectFn, serializeFolderFn, serializeFolderWithChildrenFn, serializeTagFn, serializeTagWithChildrenFn, serializePerspectiveFn } from "../serializers.js";
+import { effectiveStatusFn, serializeTaskFn, serializeTaskWithChildrenFn, serializeProjectFn, serializeFolderFn, serializeFolderWithChildrenFn, serializeTagFn, serializeTagWithChildrenFn, serializePerspectiveFn } from "../serializers.js";
 import type { DumpDatabaseArgs } from "../../types/omnifocus.js";
 
 export function buildDatabaseSummaryScript(): string {
   return `(() => {
+  ${effectiveStatusFn}
+
   var inboxItems = inbox.filter(function(t) { return t.taskStatus === Task.Status.Available; });
-  var projects = flattenedProjects.filter(function(p) { return p.status === Project.Status.Active; });
+  var projects = flattenedProjects.filter(function(p) { return p.status === Project.Status.Active && !projectIsEffectivelyDropped(p); });
   var tagsList = flattenedTags;
   var folders = flattenedFolders;
 
-  var allTasks = flattenedTasks;
+  var allTasks = flattenedTasks.filter(function(t) { return !taskIsEffectivelyDropped(t); });
   var available = allTasks.filter(function(t) { return t.taskStatus === Task.Status.Available; });
   // Task.Status is mutually exclusive: a past-due task's status is Overdue, not Available.
   var dueSoon = allTasks.filter(function(t) { return t.taskStatus === Task.Status.DueSoon; });
@@ -115,7 +117,7 @@ export function buildDumpDatabaseScript(args: DumpDatabaseArgs = {}): string {
   // Projects
   var projects = flattenedProjects.slice();
   if (!includeCompleted) {
-    projects = projects.filter(function(p) { return p.status !== Project.Status.Done && p.status !== Project.Status.Dropped; });
+    projects = projects.filter(function(p) { return p.status !== Project.Status.Done && !projectIsEffectivelyDropped(p); });
   }
   var projectsSerialized = projects.map(serializeProject);
 
@@ -132,7 +134,7 @@ export function buildDumpDatabaseScript(args: DumpDatabaseArgs = {}): string {
   var perspectivesSerialized = perspectives.map(serializePerspective);
 
   // Summary
-  var allTasks = flattenedTasks;
+  var allTasks = flattenedTasks.filter(function(t) { return !taskIsEffectivelyDropped(t); });
   var available = allTasks.filter(function(t) { return t.taskStatus === Task.Status.Available; });
   // Task.Status is mutually exclusive: a past-due task's status is Overdue, not Available.
   var dueSoon = allTasks.filter(function(t) { return t.taskStatus === Task.Status.DueSoon; });
@@ -148,7 +150,7 @@ export function buildDumpDatabaseScript(args: DumpDatabaseArgs = {}): string {
 
   var summary = {
     inboxCount: inbox.filter(function(t) { return t.taskStatus === Task.Status.Available; }).length,
-    projectCount: flattenedProjects.filter(function(p) { return p.status === Project.Status.Active; }).length,
+    projectCount: flattenedProjects.filter(function(p) { return p.status === Project.Status.Active && !projectIsEffectivelyDropped(p); }).length,
     tagCount: flattenedTags.length,
     folderCount: flattenedFolders.length,
     availableTaskCount: available.length,

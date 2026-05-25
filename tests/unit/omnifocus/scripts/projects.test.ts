@@ -26,6 +26,7 @@ describe("project script builders", () => {
       const script = buildListProjectsScript({ status: "active" });
       expect(script).toContain("active");
       expect(script).toContain("Project.Status.Active");
+      expect(script).toContain("!projectIsEffectivelyDropped(p)");
     });
 
     it("should include onHold status filter", () => {
@@ -41,6 +42,7 @@ describe("project script builders", () => {
     it("should include dropped status filter", () => {
       const script = buildListProjectsScript({ status: "dropped" });
       expect(script).toContain("Project.Status.Dropped");
+      expect(script).toContain("projectIsEffectivelyDropped(p)");
     });
 
     it("should include folder filter by ID", () => {
@@ -214,6 +216,7 @@ describe("project script builders", () => {
       expect(script).toContain("Project.Status.OnHold");
       expect(script).toContain("nextReviewDate");
       expect(script).toContain("serializeProject");
+      expect(script).toContain("!projectIsEffectivelyDropped(p)");
       // The filter must allow either status; pinning the disjunction protects against accidental Active-only narrowing.
       expect(script).toMatch(/Project\.Status\.Active\s*\|\|\s*p\.status\s*===\s*Project\.Status\.OnHold/);
     });
@@ -238,7 +241,7 @@ describe("project script builders", () => {
     it("should filter out completed tasks by default", () => {
       const script = buildGetProjectTasksScript({ projectId: "proj-123" });
       expect(script).toContain("Task.Status.Completed");
-      expect(script).toContain("Task.Status.Dropped");
+      expect(script).toContain("taskIsEffectivelyDropped");
     });
 
     it("should include completed tasks when requested", () => {
