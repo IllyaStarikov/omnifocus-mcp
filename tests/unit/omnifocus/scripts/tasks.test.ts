@@ -115,6 +115,7 @@ describe("task script builders", () => {
       const script = buildListTasksScript({ taskStatus: "available" });
       expect(script).toContain("Task.Status.Available");
       expect(script).toContain('args.taskStatus === "available"');
+      expect(script).toContain("taskIsEffectivelyDropped(t)");
     });
 
     it("taskStatus 'remaining' is the union of Available and Blocked", () => {
@@ -134,6 +135,7 @@ describe("task script builders", () => {
       const script = buildListTasksScript({ taskStatus: "dropped" });
       expect(script).toContain("Task.Status.Dropped");
       expect(script).toContain('args.taskStatus === "dropped"');
+      expect(script).toContain("!taskIsEffectivelyDropped(t)");
     });
 
     it("should combine multiple filters", () => {
@@ -174,6 +176,14 @@ describe("task script builders", () => {
     it("should include available filter", () => {
       const script = buildListTasksScript({ available: true });
       expect(script).toContain("Task.Status.Available");
+      expect(script).toContain("taskIsEffectivelyDropped(t)");
+    });
+
+    it("excludes effectively dropped tasks from normal incomplete filters", () => {
+      const script = buildListTasksScript({ completed: false });
+      expect(script).toContain("taskIsEffectivelyDropped(t)");
+      expect(script).toContain("projectIsEffectivelyDropped");
+      expect(script).toContain("folderIsEffectivelyDropped");
     });
   });
 

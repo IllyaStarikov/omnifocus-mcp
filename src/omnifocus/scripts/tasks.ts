@@ -1,4 +1,4 @@
-import { serializeTaskFn, serializeTaskWithChildrenFn, serializeTaskNotificationFn, serializeProjectFn } from "../serializers.js";
+import { effectiveStatusFn, serializeTaskFn, serializeTaskWithChildrenFn, serializeTaskNotificationFn, serializeProjectFn } from "../serializers.js";
 import type { ListTasksArgs, CreateTaskArgs, UpdateTaskArgs, GetTaskArgs, MoveTasksArgs, DuplicateTasksArgs, SetTaskTagsArgs, AddTaskNotificationArgs, BatchCreateTasksArgs, BatchDeleteTasksArgs, BatchCompleteTasksArgs } from "../../types/omnifocus.js";
 import { validateDateArgs } from "../../utils/dates.js";
 
@@ -24,17 +24,19 @@ const taskFilterLogicFn = `
   var tasks = source.filter(function(t) {
     // Filter by taskStatus
     if (args.taskStatus === "available") {
+      if (taskIsEffectivelyDropped(t)) return false;
       if (t.taskStatus !== Task.Status.Available) return false;
     } else if (args.taskStatus === "remaining") {
+      if (taskIsEffectivelyDropped(t)) return false;
       if (t.taskStatus !== Task.Status.Available && t.taskStatus !== Task.Status.Blocked) return false;
     } else if (args.taskStatus === "completed") {
       if (t.taskStatus !== Task.Status.Completed) return false;
     } else if (args.taskStatus === "dropped") {
-      if (t.taskStatus !== Task.Status.Dropped) return false;
+      if (!taskIsEffectivelyDropped(t)) return false;
     } else if (args.completed === true) {
       if (t.taskStatus !== Task.Status.Completed) return false;
     } else if (args.completed === false) {
-      if (t.taskStatus === Task.Status.Completed || t.taskStatus === Task.Status.Dropped) return false;
+      if (t.taskStatus === Task.Status.Completed || taskIsEffectivelyDropped(t)) return false;
     }
 
     // Match effectiveFlagged so children of a flagged project surface (mirrors OmniFocus's Flagged perspective).
@@ -42,7 +44,7 @@ const taskFilterLogicFn = `
     if (args.flagged === false && t.effectiveFlagged) return false;
 
     // Filter by available
-    if (args.available === true && t.taskStatus !== Task.Status.Available) return false;
+    if (args.available === true && (t.taskStatus !== Task.Status.Available || taskIsEffectivelyDropped(t))) return false;
 
     // Filter by project ID
     if (args.projectId) {
@@ -87,6 +89,7 @@ export function buildListTasksScript(args: ListTasksArgs): string {
   return `(() => {
   var args = JSON.parse(${JSON.stringify(argsJson)});
   ${serializeTaskFn}
+  ${effectiveStatusFn}
   ${taskFilterLogicFn}
 
   // Pagination
@@ -102,6 +105,7 @@ export function buildGetTaskCountScript(args: ListTasksArgs): string {
   const argsJson = JSON.stringify(args);
   return `(() => {
   var args = JSON.parse(${JSON.stringify(argsJson)});
+  ${effectiveStatusFn}
   ${taskFilterLogicFn}
 
   return JSON.stringify({ count: tasks.length });

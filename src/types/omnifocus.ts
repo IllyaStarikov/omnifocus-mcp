@@ -57,6 +57,8 @@ export interface ProjectJSON {
   note: string;
   url: string;
   status: "active" | "onHold" | "done" | "dropped";
+  effectiveStatus: "active" | "onHold" | "done" | "dropped";
+  effectivelyDropped: boolean;
   flagged: boolean;
   completed: boolean;
   deferDate: string | null;

@@ -77,12 +77,38 @@ function serializeTaskWithChildren(task, depth, maxDepth) {
   return result;
 }`;
 
+export const effectiveStatusFn = `
+function folderIsEffectivelyDropped(folder) {
+  while (folder && folder.constructor === Folder) {
+    if (folder.status === Folder.Status.Dropped) return true;
+    folder = folder.parent && folder.parent.constructor === Folder ? folder.parent : null;
+  }
+  return false;
+}
+
+function projectIsEffectivelyDropped(project) {
+  return project.status === Project.Status.Dropped || folderIsEffectivelyDropped(project.parentFolder);
+}
+
+function taskIsEffectivelyDropped(task) {
+  if (task.effectivelyDropped === true) return true;
+  if (task.containingProject && projectIsEffectivelyDropped(task.containingProject)) return true;
+  return false;
+}
+
+function projectEffectiveStatus(project) {
+  if (projectIsEffectivelyDropped(project)) return "dropped";
+  return _projectStatusMap[project.status] || "active";
+}`;
+
 export const serializeProjectFn = `
 var _projectStatusMap = {};
 _projectStatusMap[Project.Status.Active] = "active";
 _projectStatusMap[Project.Status.OnHold] = "onHold";
 _projectStatusMap[Project.Status.Done] = "done";
 _projectStatusMap[Project.Status.Dropped] = "dropped";
+
+${effectiveStatusFn}
 
 function serializeProject(project) {
   var ri = null;
@@ -97,6 +123,8 @@ function serializeProject(project) {
     note: project.note,
     url: "omnifocus:///task/" + project.id.primaryKey,
     status: _projectStatusMap[project.status] || "active",
+    effectiveStatus: projectEffectiveStatus(project),
+    effectivelyDropped: projectIsEffectivelyDropped(project),
     flagged: project.flagged,
     completed: project.status === Project.Status.Done,
     deferDate: project.deferDate ? project.deferDate.toISOString() : null,

@@ -1,4 +1,4 @@
-import { serializeProjectFn, serializeTaskFn } from "../serializers.js";
+import { effectiveStatusFn, serializeProjectFn, serializeTaskFn } from "../serializers.js";
 import type { ListProjectsArgs, CreateProjectArgs, UpdateProjectArgs, GetProjectTasksArgs } from "../../types/omnifocus.js";
 import { validateDateArgs } from "../../utils/dates.js";
 
@@ -12,13 +12,13 @@ export function buildListProjectsScript(args: ListProjectsArgs): string {
 
   // Filter by status
   if (args.status === "active") {
-    projects = projects.filter(function(p) { return p.status === Project.Status.Active; });
+    projects = projects.filter(function(p) { return p.status === Project.Status.Active && !projectIsEffectivelyDropped(p); });
   } else if (args.status === "onHold") {
-    projects = projects.filter(function(p) { return p.status === Project.Status.OnHold; });
+    projects = projects.filter(function(p) { return p.status === Project.Status.OnHold && !projectIsEffectivelyDropped(p); });
   } else if (args.status === "done") {
     projects = projects.filter(function(p) { return p.status === Project.Status.Done; });
   } else if (args.status === "dropped") {
-    projects = projects.filter(function(p) { return p.status === Project.Status.Dropped; });
+    projects = projects.filter(function(p) { return projectIsEffectivelyDropped(p); });
   }
 
   // Filter by folder
@@ -218,7 +218,10 @@ export function buildGetReviewQueueScript(): string {
   var now = new Date();
   // OmniFocus's Review perspective includes both Active and OnHold projects whose nextReviewDate has passed.
   var projects = flattenedProjects.filter(function(p) {
-    return (p.status === Project.Status.Active || p.status === Project.Status.OnHold) && p.nextReviewDate && p.nextReviewDate <= now;
+    return (p.status === Project.Status.Active || p.status === Project.Status.OnHold)
+      && !projectIsEffectivelyDropped(p)
+      && p.nextReviewDate
+      && p.nextReviewDate <= now;
   });
 
   return JSON.stringify(projects.map(serializeProject));
@@ -242,6 +245,7 @@ export function buildGetProjectTasksScript(args: GetProjectTasksArgs): string {
   const argsJson = JSON.stringify(args);
   return `(() => {
   var args = JSON.parse(${JSON.stringify(argsJson)});
+  ${effectiveStatusFn}
   ${serializeTaskFn}
 
   var project = byId(flattenedProjects, args.projectId);
@@ -249,7 +253,7 @@ export function buildGetProjectTasksScript(args: GetProjectTasksArgs): string {
 
   var tasks = project.flattenedTasks.slice();
   if (!args.includeCompleted) {
-    tasks = tasks.filter(function(t) { return t.taskStatus !== Task.Status.Completed && t.taskStatus !== Task.Status.Dropped; });
+    tasks = tasks.filter(function(t) { return t.taskStatus !== Task.Status.Completed && !taskIsEffectivelyDropped(t); });
   }
 
   return JSON.stringify(tasks.map(serializeTask));
